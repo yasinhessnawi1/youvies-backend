@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=${PORT}
+      
+    volumes:
+      - .:/go/src/youvies-backend
+      - go_mod_cache:/go/pkg/mod
+      - ./..secrets:/credentials:ro # Mount the Firebase key
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  go_mod_cache:
