@@ -9,6 +9,7 @@ services:
       - "5000:5000"
     environment:
       - PORT=${PORT}
+      - OMDB_KEY=${OMDB_KEY}
       - TMDB_KEY=${TMDB_KEY}
       - TVDB_KEY=${TVDB_KEY}
       - MONGO_DATABASE=${MONGO_DATABASE}
@@ -21,7 +22,6 @@ services:
     volumes:
       - .:/go/src/youvies-backend
       - go_mod_cache:/go/pkg/mod
-      - ./..secrets:/credentials:ro # Mount the Firebase key
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
