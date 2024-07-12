@@ -1,4 +1,4 @@
-version: '3.8'
+version: '2.2'
 
 services:
   dashboard:
@@ -6,17 +6,25 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "5000:5000"
     environment:
       - PORT=${PORT}
-      
+      - TMDB_KEY=${TMDB_KEY}
+      - TVDB_KEY=${TVDB_KEY}
+      - MONGO_DATABASE=${MONGO_DATABASE}
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASS=${MONGO_PASS}
+      - CRON_TIME=${CRON_TIME}
+      - TEMP_DIR=${TEMP_DIR}
     volumes:
       - .:/go/src/youvies-backend
       - go_mod_cache:/go/pkg/mod
       - ./..secrets:/credentials:ro # Mount the Firebase key
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,5 +1,4 @@
 # Use the official Golang image to create a build artifact.
-# This is a multi-stage build where this first stage is named as 'builder'.
 FROM golang:1.21 as builder
 
 # Label the stage and the maintainer of the Dockerfile.
@@ -15,13 +14,13 @@ COPY go.mod go.sum /go/src/youvies-backend/
 RUN go mod download
 
 # Copy the rest of the application code to the container.
-COPY /api /go/src/youvies-backend/api
-COPY /database /go/src/youvies-backend/database
-COPY /models /go/src/youvies-backend/models
-COPY /cmd /go/src/youvies-backend/cmd
-COPY /utils /go/src/youvies-backend/utils
-COPY /scraper /go/src/youvies-backend/scraper
-COPY /.env /go/src/youvies-backend/.env
+COPY api/ /go/src/youvies-backend/api
+COPY database/ /go/src/youvies-backend/database
+COPY models/ /go/src/youvies-backend/models
+COPY cmd/ /go/src/youvies-backend/cmd
+COPY utils/ /go/src/youvies-backend/utils
+COPY scraper/ /go/src/youvies-backend/scraper
+COPY .env /go/src/youvies-backend/.env
 
 # Compile the application to an executable named 'dashboard'.
 # Specify the directory of the main package if it's not in the root directory.
@@ -31,20 +30,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o you
 
 # Start a new stage from scratch to keep the final image clean and small.
 FROM alpine:latest
-# Install tzdata package to include time zone data
-RUN apk add --no-cache tzdata
-
 
 # Copy only the built executable from the builder stage into this lightweight image.
 COPY --from=builder /go/src/youvies-backend/youvies-backend .
 
-# Inform Docker that the container listens on port 8080 at runtime.
-EXPOSE 8080
+# Inform Docker that the container listens on port 5000 at runtime.
+EXPOSE 5000
 
 # Define a health check for the application.
 # This will help Docker know how to test that the application is working.
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD [ "curl", "-f", "http://localhost:8080/health" ]
+  CMD [ "curl", "-f", "http://localhost:5000/health" ]
 
 # Set the container's default executable which is the application binary.
 ENTRYPOINT ["./youvies-backend"]
