@@ -34,6 +34,8 @@ func RegisterHandlers(r *mux.Router) {
 	r.HandleFunc("/youvies/v1/shows/{id}", AuthMiddleware(http.HandlerFunc(DeleteShow), "admin").ServeHTTP).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/youvies/v1/shows/search", AuthMiddleware(http.HandlerFunc(SearchShows), "user").ServeHTTP).Methods("GET", "OPTIONS")
 
+	r.HandleFunc("/youvies/v1/stream", StreamTorrentHandler).Methods("POST", "OPTIONS")
+
 	// User Endpoints
 	r.HandleFunc("/youvies/v1/api/register", RegisterUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/youvies/v1/api/login", LoginUser).Methods("POST", "OPTIONS")
