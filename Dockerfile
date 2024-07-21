@@ -1,4 +1,3 @@
-# Use the official Golang image to create a build artifact.
 FROM golang:1.21 as builder
 
 # Label the stage and the maintainer of the Dockerfile.
@@ -20,8 +19,7 @@ COPY models/ /go/src/youvies-backend/models
 COPY cmd/ /go/src/youvies-backend/cmd
 COPY utils/ /go/src/youvies-backend/utils
 COPY scraper/ /go/src/youvies-backend/scraper
-COPY .env /go/src/youvies-backend/.env
-
+COPY .env /go/src/youvies-backend/
 # Compile the application to an executable named 'dashboard'.
 # Specify the directory of the main package if it's not in the root directory.
 # CGO_ENABLED=0 is required for building a statically linked binary.
@@ -33,7 +31,8 @@ FROM alpine:latest
 
 # Copy only the built executable from the builder stage into this lightweight image.
 COPY --from=builder /go/src/youvies-backend/youvies-backend .
-
+COPY --from=builder /go/src/youvies-backend/.env .
+COPY --from=builder /go/src/youvies-backend/utils/ ./utils
 # Inform Docker that the container listens on port 5000 at runtime.
 EXPOSE 5000
 

@@ -1,4 +1,4 @@
-version: '2.2'
+version: '3.8'
 
 services:
   dashboard:
@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       - PORT=${PORT}
       - OMDB_KEY=${OMDB_KEY}
@@ -19,6 +19,9 @@ services:
       - MONGO_PASS=${MONGO_PASS}
       - CRON_TIME=${CRON_TIME}
       - TEMP_DIR=${TEMP_DIR}
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - .:/go/src/youvies-backend
       - go_mod_cache:/go/pkg/mod

@@ -15,7 +15,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("Error loading .env file: %v", err)
 	}
 
 	// Setup the router and register handlers
@@ -34,12 +34,13 @@ func main() {
 
 	go func() {
 		log.Println(http.ListenAndServe(":"+port, loggedRouter))
+                log.Println("started listning")
 	}()
 
 	tmdb := os.Getenv("TMDB_KEY")
 	omdb := os.Getenv("OMDB_KEY")
 	tvdb := os.Getenv("TVDB_KEY")
-
+	log.Println("connecting to database")
 	// Connect to the database
 	database.ConnectDB()
 

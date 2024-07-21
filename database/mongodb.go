@@ -1,40 +1,44 @@
 package database
 
 import (
-	"context"
-	"errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"os"
-	"time"
+    "context"
+    "errors"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/mongo/options"
+    "log"
+    "os"
+    "time"
 )
 
 var Client *mongo.Client
 
 func ConnectDB() {
-	uri := os.Getenv("MONGO_URI")
-	if uri == "" {
-		log.Fatal("MONGO_URI not found in environment")
-	}
+    uri := os.Getenv("MONGO_URI")
+    if uri == "" {
+        log.Println("MONGO_URI not found in environment, using default URI")
+    }
+     log.Println(uri)
+    
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+    client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+    if err != nil {
+	log.Println("error connecting to database, client couldnt connect")
+        log.Fatal(err)
+    }
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-	if err != nil {
-		log.Fatal(err)
-	}
+    err = client.Ping(ctx, nil)
+    if err != nil {
+        log.Println("client couldn't ping")
+        log.Fatal(err)
+    }
 
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	Client = client
-	log.Println("Connected to MongoDB!")
+    Client = client
+    log.Println("Connected to MongoDB!")
 }
+
 
 func InsertItem(item interface{}, title string, collectionName string) error {
 	collection := Client.Database("youvies").Collection(collectionName)
