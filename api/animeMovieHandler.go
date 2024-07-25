@@ -68,9 +68,24 @@ func GetAnimeMovieByID(c *gin.Context) {
 // GetAnimeMoviesByGenre retrieves anime movies by genre from the database.
 func GetAnimeMoviesByGenre(c *gin.Context) {
 	genre := c.Param("genre")
+	// Read pagination parameters from URL query
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
 
+	// Set default values if parameters are not provided
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	skip := (page - 1) * pageSize
 	var animeMovies []models.AnimeMovie
-	err := database.FindMany(bson.D{{"genres.name", genre}}, "anime_movies", &animeMovies)
+	err = database.FindMany(bson.D{{"genres.name", genre}}, "anime_movies", &animeMovies, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

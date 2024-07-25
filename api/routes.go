@@ -37,8 +37,6 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/youvies/v1/shows/search", AuthMiddleware("user"), SearchShows)
 	r.GET("/youvies/v1/shows/genre/:genre", AuthMiddleware("user"), GetShowsByGenre)
 
-	r.HandleFunc("/youvies/v1/stream", StreamTorrentHandler).Methods("POST", "OPTIONS")
-
 	// User Endpoints
 	r.POST("/youvies/v1/api/register", RegisterUser)
 	r.POST("/youvies/v1/api/login", LoginUser)

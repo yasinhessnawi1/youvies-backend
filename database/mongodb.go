@@ -115,11 +115,11 @@ func FindItem(filter interface{}, collectionName string, result interface{}) err
 
 	return nil
 }
-func FindMany(filter bson.D, collectionName string, results interface{}) error {
+func FindMany(filter bson.D, collectionName string, results interface{}, option *options.FindOptions) error {
 	collection := Client.Database("youvies").Collection(collectionName)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	cursor, err := collection.Find(ctx, filter)
+	cursor, err := collection.Find(ctx, filter, option)
 	if err != nil {
 		return err
 	}

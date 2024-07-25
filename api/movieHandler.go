@@ -31,9 +31,7 @@ func GetMovies(c *gin.Context) {
 		pageSize = 10
 	}
 
-	skip := (page - 1) * pageSize
-
-	// Find with pagination
+	skip := (page - 1) * pageSize // Find with pagination
 	cursor, err := collection.Find(context.Background(), bson.M{}, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -68,7 +66,23 @@ func GetMovieByID(c *gin.Context) {
 func GetMoviesByGenre(c *gin.Context) {
 	genre := c.Param("genre")
 	var movies []models.Movie
-	err := database.FindMany(bson.D{{"genres.name", genre}}, "movies", &movies)
+	// Read pagination parameters from URL query
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
+
+	// Set default values if parameters are not provided
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	skip := (page - 1) * pageSize
+	err = database.FindMany(bson.D{{"genres.name", genre}}, "movies", &movies, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
