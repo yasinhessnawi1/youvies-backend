@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 )
 
-func FetchURL(url, apiKey string) (*http.Response, error) {
-	client := &http.Client{Timeout: DefaultTimeout * time.Second}
+func FetchURLWithKey(url, apiKey string) (*http.Response, error) {
+	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
@@ -28,9 +27,34 @@ func FetchURL(url, apiKey string) (*http.Response, error) {
 
 	return resp, nil
 }
+func FetchURL(url string) (*http.Response, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
 
 func FetchJSON(url, apiKey string, target interface{}) error {
-	resp, err := FetchURL(url, apiKey)
+	var resp *http.Response
+	var err error
+	if apiKey != "" {
+		resp, err = FetchURLWithKey(url, apiKey)
+	} else {
+		resp, err = FetchURL(url)
+	}
 	if err != nil {
 		log.Printf("Error fetching URL: %v\n", err)
 		return nil
@@ -38,17 +62,8 @@ func FetchJSON(url, apiKey string, target interface{}) error {
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-		return fmt.Errorf("error decoding JSON: %v", err)
+		return fmt.Errorf("error decoding JSON for %v: %v", url, err)
 	}
 
 	return nil
-}
-
-func GetYear(dateStr string) int {
-	if len(dateStr) >= 4 {
-		var year int
-		fmt.Sscanf(dateStr, "%4d", &year)
-		return year
-	}
-	return 0
 }

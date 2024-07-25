@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -18,12 +17,15 @@ func main() {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
-	// Setup the router and register handlers
-	r := mux.NewRouter()
-	r.Use(enableCors)
-
-	api.RegisterHandlers(r)
-	loggedRouter := handlers.LoggingHandler(os.Stdout, r)
+	// Create a new Gin router
+	router := gin.Default()
+	router.Use(enableCors)
+	router.HandleMethodNotAllowed = true
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+	router.Use(gin.ErrorLoggerT(gin.ErrorTypeAny))
+	// Register routes
+	api.RegisterRoutes(router)
 
 	// Start the server
 	port := os.Getenv("PORT")
@@ -33,55 +35,47 @@ func main() {
 	log.Printf("Starting server on port %s", port)
 
 	go func() {
-		log.Println(http.ListenAndServe(":"+port, loggedRouter))
-                log.Println("started listning")
+		if err := router.Run(":" + port); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
 	}()
 
 	tmdb := os.Getenv("TMDB_KEY")
-	omdb := os.Getenv("OMDB_KEY")
-	tvdb := os.Getenv("TVDB_KEY")
-	log.Println("connecting to database")
+
 	// Connect to the database
 	database.ConnectDB()
 
-	// Initialize scrapers with API keys
+	movieScraper := scraper.NewMovieScraper(tmdb)
+	showScraper := scraper.NewShowScraper(tmdb)
 	animeShowScraper := scraper.NewAnimeShowScraper()
 	animeMovieScraper := scraper.NewAnimeMovieScraper()
-	movieScraper := scraper.NewMovieScraper(tmdb, omdb)
-	showScraper := scraper.NewShowScraper(tmdb, tvdb)
 
 	// Initialize bulk scraper
 	bulkScraper := scraper.NewBulkScraper([]scraper.Scraper{
-		animeShowScraper,
-		animeMovieScraper,
 		showScraper,
 		movieScraper,
+		animeShowScraper,
+		animeMovieScraper,
 	})
 
-	go func() {
-		showScraper.FetchOldShows()
-	}()
-
 	// Run the bulk scraper
-	err = bulkScraper.ScrapeAll()
-	if err != nil {
+	if err := bulkScraper.ScrapeAll(); err != nil {
 		log.Printf("Error scraping data: %v", err)
 	}
 
 	// Block forever to keep the program running
 	select {}
 }
-func enableCors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+func enableCors(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-		next.ServeHTTP(w, r)
-	})
+	if c.Request.Method == "OPTIONS" {
+		c.AbortWithStatus(http.StatusOK)
+		return
+	}
+
+	c.Next()
 }

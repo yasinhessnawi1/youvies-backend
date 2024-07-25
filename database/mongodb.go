@@ -1,44 +1,43 @@
 package database
 
 import (
-    "context"
-    "errors"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
-    "log"
-    "os"
-    "time"
+	"context"
+	"errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
+	"os"
+	"time"
 )
 
 var Client *mongo.Client
 
 func ConnectDB() {
-    uri := os.Getenv("MONGO_URI")
-    if uri == "" {
-        log.Println("MONGO_URI not found in environment, using default URI")
-    }
-     log.Println(uri)
-    
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+	uri := os.Getenv("MONGO_URI")
+	if uri == "" {
+		log.Println("MONGO_URI not found in environment, using default URI")
+	}
+	log.Println(uri)
 
-    client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-    if err != nil {
-	log.Println("error connecting to database, client couldnt connect")
-        log.Fatal(err)
-    }
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-    err = client.Ping(ctx, nil)
-    if err != nil {
-        log.Println("client couldn't ping")
-        log.Fatal(err)
-    }
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	if err != nil {
+		log.Println("error connecting to database, client couldnt connect")
+		log.Fatal(err)
+	}
 
-    Client = client
-    log.Println("Connected to MongoDB!")
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Println("client couldn't ping")
+		log.Fatal(err)
+	}
+
+	Client = client
+	log.Println("Connected to MongoDB!")
 }
-
 
 func InsertItem(item interface{}, title string, collectionName string) error {
 	collection := Client.Database("youvies").Collection(collectionName)
@@ -111,6 +110,22 @@ func FindItem(filter interface{}, collectionName string, result interface{}) err
 
 	err := collection.FindOne(ctx, filter).Decode(result)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func FindMany(filter bson.D, collectionName string, results interface{}) error {
+	collection := Client.Database("youvies").Collection(collectionName)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, results); err != nil {
 		return err
 	}
 

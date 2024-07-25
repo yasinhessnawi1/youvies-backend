@@ -16,10 +16,8 @@ type TorrentResponse struct {
 		Magnet     string   `json:"magnet"`
 		Hash       string   `json:"hash"`
 	} `json:"data"`
-	CurrentPage int     `json:"current_page"`
-	TotalPages  int     `json:"total_pages"`
-	Time        float64 `json:"time"`
-	Total       int     `json:"total"`
+	Time  float64 `json:"time"`
+	Total int     `json:"total"`
 }
 
 type Torrent struct {

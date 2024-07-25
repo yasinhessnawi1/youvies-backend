@@ -1,42 +1,45 @@
 package api
 
 import (
-	"github.com/gorilla/mux"
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
-func RegisterHandlers(r *mux.Router) {
+func RegisterRoutes(r *gin.Engine) {
 	// Movies Endpoints
-	r.HandleFunc("/youvies/v1/movies", AuthMiddleware(http.HandlerFunc(GetMovies), "user").ServeHTTP).Methods("GET", "OPTIONS")
-	r.HandleFunc("/youvies/v1/movies", AuthMiddleware(http.HandlerFunc(CreateMovie), "admin").ServeHTTP).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/movies/{id}", AuthMiddleware(http.HandlerFunc(UpdateMovie), "admin").ServeHTTP).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/youvies/v1/movies/{id}", AuthMiddleware(http.HandlerFunc(DeleteMovie), "admin").ServeHTTP).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/youvies/v1/movies/search", AuthMiddleware(http.HandlerFunc(SearchMovies), "user").ServeHTTP).Methods("GET", "OPTIONS")
+	r.GET("/youvies/v1/movies", AuthMiddleware("user"), GetMovies)
+	r.POST("/youvies/v1/movies", AuthMiddleware("admin"), CreateMovie)
+	r.PUT("/youvies/v1/movies/:id", AuthMiddleware("admin"), UpdateMovie)
+	r.DELETE("/youvies/v1/movies/:id", AuthMiddleware("admin"), DeleteMovie)
+	r.GET("/youvies/v1/movies/search", AuthMiddleware("user"), SearchMovies)
+	r.GET("/youvies/v1/movies/genre/:genre", AuthMiddleware("user"), GetMoviesByGenre)
 
 	// Anime Shows Endpoints
-	r.HandleFunc("/youvies/v1/animeshows", AuthMiddleware(http.HandlerFunc(GetAnimeShows), "user").ServeHTTP).Methods("GET", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animeshows", AuthMiddleware(http.HandlerFunc(CreateAnimeShow), "admin").ServeHTTP).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animeshows/{id}", AuthMiddleware(http.HandlerFunc(UpdateAnimeShow), "admin").ServeHTTP).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animeshows/{id}", AuthMiddleware(http.HandlerFunc(DeleteAnimeShow), "admin").ServeHTTP).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animeshows/search", AuthMiddleware(http.HandlerFunc(SearchAnimeShows), "user").ServeHTTP).Methods("GET", "OPTIONS")
+	r.GET("/youvies/v1/animeshows", AuthMiddleware("user"), GetAnimeShows)
+	r.POST("/youvies/v1/animeshows", AuthMiddleware("admin"), CreateAnimeShow)
+	r.PUT("/youvies/v1/animeshows/:id", AuthMiddleware("admin"), UpdateAnimeShow)
+	r.DELETE("/youvies/v1/animeshows/:id", AuthMiddleware("admin"), DeleteAnimeShow)
+	r.GET("/youvies/v1/animeshows/search", AuthMiddleware("user"), SearchAnimeShows)
+	r.GET("/youvies/v1/animeshows/genre/:genre", AuthMiddleware("user"), GetAnimeShowsByGenre)
 
 	// Anime Movies Endpoints
-	r.HandleFunc("/youvies/v1/animemovies", AuthMiddleware(http.HandlerFunc(GetAnimeMovies), "user").ServeHTTP).Methods("GET", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animemovies", AuthMiddleware(http.HandlerFunc(CreateAnimeMovie), "admin").ServeHTTP).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animemovies/{id}", AuthMiddleware(http.HandlerFunc(UpdateAnimeMovie), "admin").ServeHTTP).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animemovies/{id}", AuthMiddleware(http.HandlerFunc(DeleteAnimeMovie), "admin").ServeHTTP).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/youvies/v1/animemovies/search", AuthMiddleware(http.HandlerFunc(SearchAnimeMovies), "user").ServeHTTP).Methods("GET", "OPTIONS")
+	r.GET("/youvies/v1/animemovies", AuthMiddleware("user"), GetAnimeMovies)
+	r.POST("/youvies/v1/animemovies", AuthMiddleware("admin"), CreateAnimeMovie)
+	r.PUT("/youvies/v1/animemovies/:id", AuthMiddleware("admin"), UpdateAnimeMovie)
+	r.DELETE("/youvies/v1/animemovies/:id", AuthMiddleware("admin"), DeleteAnimeMovie)
+	r.GET("/youvies/v1/animemovies/search", AuthMiddleware("user"), SearchAnimeMovies)
+	r.GET("/youvies/v1/animemovies/genre/:genre", AuthMiddleware("user"), GetAnimeMoviesByGenre)
 
 	// Shows Endpoints
-	r.HandleFunc("/youvies/v1/shows", AuthMiddleware(http.HandlerFunc(GetShows), "user").ServeHTTP).Methods("GET", "OPTIONS")
-	r.HandleFunc("/youvies/v1/shows", AuthMiddleware(http.HandlerFunc(CreateShow), "admin").ServeHTTP).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/shows/{id}", AuthMiddleware(http.HandlerFunc(UpdateShow), "admin").ServeHTTP).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/youvies/v1/shows/{id}", AuthMiddleware(http.HandlerFunc(DeleteShow), "admin").ServeHTTP).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/youvies/v1/shows/search", AuthMiddleware(http.HandlerFunc(SearchShows), "user").ServeHTTP).Methods("GET", "OPTIONS")
+	r.GET("/youvies/v1/shows", AuthMiddleware("user"), GetShows)
+	r.POST("/youvies/v1/shows", AuthMiddleware("admin"), CreateShow)
+	r.PUT("/youvies/v1/shows/:id", AuthMiddleware("admin"), UpdateShow)
+	r.DELETE("/youvies/v1/shows/:id", AuthMiddleware("admin"), DeleteShow)
+	r.GET("/youvies/v1/shows/search", AuthMiddleware("user"), SearchShows)
+	r.GET("/youvies/v1/shows/genre/:genre", AuthMiddleware("user"), GetShowsByGenre)
 
 	// User Endpoints
-	r.HandleFunc("/youvies/v1/api/register", RegisterUser).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/api/login", LoginUser).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/api/logout", AuthMiddleware(http.HandlerFunc(LogoutUser), "user").ServeHTTP).Methods("POST", "OPTIONS")
-	r.HandleFunc("/youvies/v1/api/user", AuthMiddleware(http.HandlerFunc(EditUser), "user").ServeHTTP).Methods("PUT", "OPTIONS")
+	r.POST("/youvies/v1/api/register", RegisterUser)
+	r.POST("/youvies/v1/api/login", LoginUser)
+	r.POST("/youvies/v1/api/logout", AuthMiddleware("user"), LogoutUser)
+	r.PUT("/youvies/v1/api/user", AuthMiddleware("user"), EditUser)
 }

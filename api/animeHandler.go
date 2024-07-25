@@ -2,23 +2,23 @@ package api
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"strconv"
 	"youvies-backend/database"
 	"youvies-backend/models"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func GetAnimeShows(w http.ResponseWriter, r *http.Request) {
+// GetAnimeShows retrieves anime shows with pagination.
+func GetAnimeShows(c *gin.Context) {
 	collection := database.Client.Database("youvies").Collection("anime_shows")
 
 	// Read pagination parameters from URL query
-	pageStr := r.URL.Query().Get("page")
-	pageSizeStr := r.URL.Query().Get("pageSize")
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
 
 	// Set default values if parameters are not provided
 	page, err := strconv.Atoi(pageStr)
@@ -36,148 +36,116 @@ func GetAnimeShows(w http.ResponseWriter, r *http.Request) {
 	// Find with pagination
 	cursor, err := collection.Find(context.Background(), bson.M{}, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer cursor.Close(context.Background())
 
-	var shows []models.Anime
-	if err = cursor.All(context.Background(), &shows); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	var animeShows []models.AnimeShow
+	if err = cursor.All(context.Background(), &animeShows); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Filter and remove duplicates
-	uniqueShows := make(map[string]models.Anime)
-	for _, show := range shows {
-		if _, exists := uniqueShows[show.Attributes.Titles.En]; !exists {
-			uniqueShows[show.Attributes.Titles.En] = show
-		}
-	}
-
-	result := make([]models.Anime, 0, len(uniqueShows))
-	for _, show := range uniqueShows {
-		result = append(result, show)
-	}
-
-	// Encode and send the result
-	err = json.NewEncoder(w).Encode(result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.JSON(http.StatusOK, animeShows)
 }
 
-func GetAnimeShow(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
-	}
+// GetAnimeShowByID retrieves an anime show by its ID from the database.
+func GetAnimeShowByID(c *gin.Context) {
+	id := c.Param("id")
 
-	var show models.Anime
+	var animeShow models.AnimeShow
 	collection := database.Client.Database("youvies").Collection("anime_shows")
-	if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&show); err != nil {
-		http.Error(w, "Anime show not found", http.StatusNotFound)
+	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&animeShow); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Anime show not found"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(show)
+	c.JSON(http.StatusOK, animeShow)
 }
 
-func CreateAnimeShow(w http.ResponseWriter, r *http.Request) {
-	var show models.Anime
-	if err := json.NewDecoder(r.Body).Decode(&show); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+// GetAnimeShowsByGenre retrieves anime shows by genre from the database.
+func GetAnimeShowsByGenre(c *gin.Context) {
+	genre := c.Param("genre")
+
+	var animeShows []models.AnimeShow
+	err := database.FindMany(bson.D{{"genres.name", genre}}, "anime_shows", &animeShows)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, animeShows)
+}
+
+// CreateAnimeShow creates a new anime show in the database.
+func CreateAnimeShow(c *gin.Context) {
+	var animeShow models.AnimeShow
+	if err := c.BindJSON(&animeShow); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := database.InsertItem(show, show.Attributes.Titles.En, "anime_shows")
+	err := database.InsertItem(animeShow, animeShow.Attributes.Titles.En, "anime_shows")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	result := map[string]string{
-		"message":    "Show created successfully",
-		"insertedID": show.Id,
+		"message": "Anime show created successfully",
+		"ID":      strconv.Itoa(animeShow.ID),
 	}
-	json.NewEncoder(w).Encode(result)
+	c.JSON(http.StatusOK, result)
 }
 
-func UpdateAnimeShow(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+// UpdateAnimeShow updates an existing anime show in the database.
+func UpdateAnimeShow(c *gin.Context) {
+	id := c.Param("id")
+
+	var animeShow models.AnimeShow
+	if err := c.BindJSON(&animeShow); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var show models.Anime
-	if err := json.NewDecoder(r.Body).Decode(&show); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = database.EditItem(bson.M{"_id": objID}, show, "anime_shows")
+	err := database.EditItem(bson.M{"_id": id}, animeShow, "anime_shows")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	results := map[string]string{
-		"message": "Show updated successfully",
+	result := map[string]string{
+		"message": "Anime show updated successfully",
 	}
-	json.NewEncoder(w).Encode(results)
+	c.JSON(http.StatusOK, result)
 }
 
-func DeleteAnimeShow(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		http.Error(w, "Invalid ID format", http.StatusBadRequest)
-		return
-	}
-	if err := database.DeleteItem(bson.M{"_id": objID}, "anime_shows"); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+// DeleteAnimeShow deletes an anime show from the database.
+func DeleteAnimeShow(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := database.DeleteItem(bson.M{"_id": id}, "anime_shows"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	c.Status(http.StatusNoContent)
 }
 
-func SearchAnimeShows(w http.ResponseWriter, r *http.Request) {
-	title := r.URL.Query().Get("title")
+// SearchAnimeShows searches anime shows by title.
+func SearchAnimeShows(c *gin.Context) {
+	title := c.Query("title")
 	collection := database.Client.Database("youvies").Collection("anime_shows")
 	cursor, err := collection.Find(context.Background(), bson.M{"title": bson.M{"$regex": title, "$options": "i"}})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer cursor.Close(context.Background())
 
-	var shows []models.Anime
-	if err = cursor.All(context.Background(), &shows); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	var animeShows []models.AnimeShow
+	if err = cursor.All(context.Background(), &animeShows); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Filter and remove duplicates
-	uniqueShows := make(map[string]models.Anime)
-	for _, show := range shows {
-		if _, exists := uniqueShows[show.Attributes.Titles.En]; !exists {
-			uniqueShows[show.Attributes.Titles.En] = show
-		}
-	}
-
-	result := make([]models.Anime, 0, len(uniqueShows))
-	for _, show := range uniqueShows {
-		result = append(result, show)
-	}
-
-	// Encode and send the result
-	err = json.NewEncoder(w).Encode(result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.JSON(http.StatusOK, animeShows)
 }

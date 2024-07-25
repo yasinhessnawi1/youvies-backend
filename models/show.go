@@ -1,48 +1,45 @@
 package models
 
-import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
-
 type Show struct {
-	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Title        string             `bson:"title" json:"title"`
-	Description  string             `bson:"description" json:"description"`
-	Year         int                `bson:"year" json:"year"`
-	Rating       float64            `bson:"rating" json:"rating"`
-	ImageURL     string             `bson:"image_url" json:"image_url"`
-	Language     string             `bson:"language" json:"language"`
-	Networks     []string           `bson:"networks" json:"networks"`
-	FirstAirDate string             `bson:"first_air_date" json:"first_air_date"`
-	Episodes     []Torrent          `bson:"episodes" json:"episodes"`
-	Country      []string           `json:"country"`
-	Backdrop     string             `json:"backdrop"`
+	ID                  int                    `bson:"_id,omitempty" json:"id,omitempty"`
+	Title               string                 `bson:"title" json:"title"`
+	Overview            string                 `bson:"overview" json:"overview"`
+	Rating              float64                `bson:"rating" json:"rating"`
+	PosterPath          string                 `bson:"image_url" json:"image_url"`
+	Networks            []string               `bson:"networks" json:"networks"`
+	FirstAirDate        string                 `bson:"first_air_date" json:"first_air_date"`
+	Country             []string               `json:"country"`
+	Seasons             map[int]Season         `bson:"seasons" json:"seasons"`
+	Genres              []GenreMapping         `json:"genres"`
+	VoteAverage         float64                `json:"vote_average"`
+	VoteCount           int                    `json:"vote_count"`
+	OriginalLanguage    string                 `json:"original_language"`
+	Popularity          float64                `json:"popularity"`
+	BackdropPath        string                 `json:"backdrop_path"`
+	Adult               bool                   `json:"adult"`
+	ExternalIDs         map[string]interface{} `bson:"external_ids" json:"external_ids"`
+	ProductionCompanies []string               `json:"production_companies"`
+	ProductionCountries []string               `json:"production_countries"`
+	SpokenLanguages     []string               `json:"spoken_languages"`
+	LastUpdated         string                 `bson:"last_updated" json:"last_updated"` // Unix timestamp of last update
+	SeasonsInfo         []SeasonInfo           `bson:"seasons_info" json:"seasons_info"`
+	OtherTorrents       []Torrent              `bson:"other_torrents" json:"other_torrents"`
 }
-
-type Season struct {
-	SeasonNumber int       `bson:"season_number" json:"season_number"`
-	Episodes     []Episode `bson:"episodes" json:"episodes"`
+type SeasonInfo struct {
+	SeasonNumber int    `json:"season_number"`
+	EpisodeCount int    `json:"episode_count"`
+	AirDate      string `json:"air_date"`
+	PosterPath   string `json:"poster_path"`
+}
+type GenreMapping struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type Episode struct {
-	EpisodeNumber int       `bson:"episode_number" json:"episode_number"`
-	Title         string    `bson:"title" json:"title"`
-	Torrents      []Torrent `bson:"torrents" json:"torrents"`
+	Torrents map[string][]Torrent `bson:"torrents" json:"torrents"`
 }
 
-type TMDBShow struct {
-	ID           int      `json:"id"`
-	Name         string   `json:"name"`
-	Overview     string   `json:"overview"`
-	FirstAirDate string   `json:"first_air_date"`
-	Genres       []string `json:"genres"`
-}
-
-type TVDBShow struct {
-	SeriesID   string   `json:"id"`
-	SeriesName string   `json:"seriesName"`
-	Network    string   `json:"network"`
-	Overview   string   `json:"overview"`
-	FirstAired string   `json:"firstAired"`
-	Genres     []string `json:"genres"`
+type Season struct {
+	Episodes map[int]Episode `bson:"episodes" json:"episodes"`
 }

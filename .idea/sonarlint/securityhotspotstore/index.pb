@@ -51,10 +51,20 @@ B
 utils/jwt.go,5\e\5e4d6eb23d72dbae60d93f01d9a10b1ede67bd30
 A
 utils/torrents.go,a\2\a2c56ccd8e0fd5524d6902b8c379830123bcfa4a
-i
-9utils/movie_ids_05_15_2024.json/movie_ids_05_15_2024.json,0\d\0ddf80aaccb668534b59e4f2bdce35012eb1b138
 :
 
 Dockerfile,6\6\6651ddff6eb82c840ced7c1dddee15c6e1913dd4
 B
 docker-compose.yml,3\5\35b8c13cf2eb2a194eada000eb310d65aed53b2a
+A
+utils/handlers.go,9\b\9b7e541ce6467b22edf858d1d4905f657b934f61
+?
+utils/scrape.go,f\e\fe50c5db7c2c1f05ca04fbc8d8c3e034c6faf8e7
+A
+utils/geners.json,1\b\1b770598405e81f885a74428f79ed047ad75eff3
+B
+utils/idHandler.go,c\b\cb113fde40e56c119f5518537677ed40e7e2dbe3
+C
+utils/generUtils.go,5\a\5ab70faffd1839d68a99ff9d9d2a0afebb74d418
+D
+utils/DateParsing.go,7\1\719b151dd41c19341b3e9a4d5da26a32796ffb50

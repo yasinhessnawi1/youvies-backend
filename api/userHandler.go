@@ -1,32 +1,33 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 	"youvies-backend/database"
 	"youvies-backend/models"
 	"youvies-backend/utils"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterUser(w http.ResponseWriter, r *http.Request) {
+// RegisterUser handles the user registration process.
+func RegisterUser(c *gin.Context) {
 	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := c.BindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	err := utils.CheckUser(user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Error hashing password", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 		return
 	}
 
@@ -37,44 +38,44 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	user.Role = "user"
 
 	if err := database.InsertItem(user, user.Username, "users"); err != nil {
-		http.Error(w, "Error inserting user", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting user"})
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+	c.JSON(http.StatusCreated, user)
 }
 
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+// LoginUser handles the user login process.
+func LoginUser(c *gin.Context) {
 	var creds models.User
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := c.BindJSON(&creds); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
 	if err := database.FindItem(bson.M{"username": creds.Username}, "users", &user); err != nil {
-		http.Error(w, "User not found", http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(creds.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 	if creds.Role == "" {
 		creds.Role = "user"
 	} else if user.Role != creds.Role {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 	token, err := utils.GenerateJWT(user.Username, user.Role)
 	if err != nil {
-		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{
 		Name:    "token",
 		Value:   token,
 		Expires: time.Now().Add(100 * 365 * 24 * time.Hour),
@@ -83,16 +84,16 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		"token": token,
 		"user":  user,
 	}
-	json.NewEncoder(w).Encode(response)
-
+	c.JSON(http.StatusOK, response)
 }
 
-func EditUser(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(UserKey).(string)
+// EditUser handles updating user details.
+func EditUser(c *gin.Context) {
+	userID := c.GetString("user")
 
 	var userUpdate models.User
-	if err := json.NewDecoder(r.Body).Decode(&userUpdate); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := c.BindJSON(&userUpdate); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -100,7 +101,7 @@ func EditUser(w http.ResponseWriter, r *http.Request) {
 	if userUpdate.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userUpdate.Password), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, "Error hashing password", http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 			return
 		}
 		userUpdate.Password = string(hashedPassword)
@@ -110,18 +111,19 @@ func EditUser(w http.ResponseWriter, r *http.Request) {
 	update := bson.M{"$set": userUpdate}
 
 	if err := database.EditItem(filter, update, "users"); err != nil {
-		http.Error(w, "Error updating user", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
-func LogoutUser(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
+
+// LogoutUser handles the user logout process.
+func LogoutUser(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
 		Name:    "token",
 		Value:   "",
 		Expires: time.Now(),
 	})
-	json.NewEncoder(w).Encode(map[string]string{"message": "Logout successful"})
+	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }

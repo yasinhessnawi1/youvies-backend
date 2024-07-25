@@ -1,21 +1,19 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"youvies-backend/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
-type ContextKey string
-
-const UserKey ContextKey = "user"
-
-func AuthMiddleware(next http.Handler, role string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+func AuthMiddleware(role string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			http.Error(w, "Forbidden no key provided", http.StatusForbidden)
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden no key provided"})
+			c.Abort()
 			return
 		}
 
@@ -23,27 +21,26 @@ func AuthMiddleware(next http.Handler, role string) http.Handler {
 
 		claims, err := utils.ValidateJWT(tokenString)
 		if err != nil {
-			http.Error(w, "Forbidden, token not valid"+tokenString, http.StatusForbidden)
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden, token not valid"})
+			c.Abort()
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), claims.Username, claims.Role)
+		c.Set("user", claims.Username)
+		c.Set("role", claims.Role)
 
-		switch role {
-		case "admin":
-			if claims.Role != "admin" {
-				http.Error(w, "Forbidden, admin role required", http.StatusForbidden)
-				return
-			}
-		case "user":
-			if claims.Role != "user" {
-				if claims.Role != "admin" {
-					http.Error(w, "Forbidden, user role required", http.StatusForbidden)
-					return
-				}
-			}
-
+		if role == "admin" && claims.Role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden, admin role required"})
+			c.Abort()
+			return
 		}
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+
+		if role == "user" && claims.Role != "user" && claims.Role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden, user role required"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }
