@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
 	"youvies-backend/database"
@@ -14,7 +15,13 @@ import (
 
 // GetAnimeShows retrieves anime shows with pagination.
 func GetAnimeShows(c *gin.Context) {
-	collection := database.Client.Database("youvies").Collection("anime_shows")
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_anime_shows")
+	} else {
+		collection = database.Client.Database("youvies").Collection("anime_shows")
+	}
 
 	// Read pagination parameters from URL query
 	pageStr := c.Query("page")
@@ -66,6 +73,13 @@ func GetAnimeShowByID(c *gin.Context) {
 
 // GetAnimeShowsByGenre retrieves anime shows by genre from the database.
 func GetAnimeShowsByGenre(c *gin.Context) {
+	version := c.Query("type")
+	var collection string
+	if version == "tiny" {
+		collection = "tiny_anime_shows"
+	} else {
+		collection = "anime_shows"
+	}
 	genre := c.Param("genre")
 	// Read pagination parameters from URL query
 	pageStr := c.Query("page")
@@ -84,7 +98,7 @@ func GetAnimeShowsByGenre(c *gin.Context) {
 
 	skip := (page - 1) * pageSize
 	var animeShows []models.AnimeShow
-	err = database.FindMany(bson.D{{"genres.name", genre}}, "anime_shows", &animeShows, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
+	err = database.FindMany(bson.D{{"genres.name", genre}}, collection, &animeShows, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -147,8 +161,14 @@ func DeleteAnimeShow(c *gin.Context) {
 
 // SearchAnimeShows searches anime shows by title.
 func SearchAnimeShows(c *gin.Context) {
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_anime_shows")
+	} else {
+		collection = database.Client.Database("youvies").Collection("anime_shows")
+	}
 	title := c.Query("title")
-	collection := database.Client.Database("youvies").Collection("anime_shows")
 	cursor, err := collection.Find(context.Background(), bson.M{"title": bson.M{"$regex": title, "$options": "i"}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

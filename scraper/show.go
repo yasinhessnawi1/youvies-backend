@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -38,7 +39,7 @@ func (ss *ShowScraper) Scrape() error {
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
-
+	sort.Strings(ids)
 	for _, id := range ids {
 		wg.Add(1)
 		semaphore <- struct{}{}
@@ -58,7 +59,8 @@ func (ss *ShowScraper) Scrape() error {
 				log.Printf("Database error: %v", err)
 				return
 			}
-			if exists {
+			if exists && showDetails.Title == "" {
+				log.Printf("Show %s already exists in database", showDetails.Title)
 				return
 			}
 
@@ -145,6 +147,7 @@ func (ss *ShowScraper) FetchShowDetailsFromTMDB(id string) (*models.Show, error)
 		Popularity       float64               `json:"popularity"`
 		BackdropPath     string                `json:"backdrop_path"`
 		Adult            bool                  `json:"adult"`
+		Rating           string                `json:"rating"`
 		NumberOfSeasons  int                   `json:"number_of_seasons"`
 		NumberOfEpisodes int                   `json:"number_of_episodes"`
 		Seasons          []models.SeasonInfo   `json:"seasons"`
@@ -192,7 +195,6 @@ func (ss *ShowScraper) FetchShowDetailsFromTMDB(id string) (*models.Show, error)
 		OriginalLanguage:    response.OriginalLanguage,
 		Popularity:          response.Popularity,
 		BackdropPath:        response.BackdropPath,
-		Adult:               response.Adult,
 		SeasonsInfo:         response.Seasons,
 		Networks:            ss.parseNetworks(response.Networks),
 		ProductionCompanies: ss.parseProductionCompanies(response.ProductionCompanies),
@@ -304,7 +306,6 @@ func (ss *ShowScraper) createShowDoc(showDetails *models.Show, torrents map[int]
 		OriginalLanguage:    showDetails.OriginalLanguage,
 		Popularity:          showDetails.Popularity,
 		BackdropPath:        showDetails.BackdropPath,
-		Adult:               showDetails.Adult,
 		Seasons:             torrents,
 		Networks:            showDetails.Networks,
 		ProductionCompanies: showDetails.ProductionCompanies,
@@ -315,7 +316,6 @@ func (ss *ShowScraper) createShowDoc(showDetails *models.Show, torrents map[int]
 		LastUpdated:         time.Now().Format(time.RFC3339),
 		OtherTorrents:       showDetails.OtherTorrents,
 		Country:             showDetails.Country,
-		Rating:              showDetails.Rating,
 	}
 }
 

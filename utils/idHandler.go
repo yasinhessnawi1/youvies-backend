@@ -1,11 +1,8 @@
 package utils
 
 import (
-	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
+	rand2 "math/rand"
 	"sync"
 )
 
@@ -21,32 +18,13 @@ var (
 func InitializeIDCounters(client *mongo.Client) {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
-
-	movieIDCounter = getMaxID(client, "movies")
-	showIDCounter = getMaxID(client, "shows")
-	animeMovieIDCounter = getMaxID(client, "anime_movies")
-	animeShowIDCounter = getMaxID(client, "anime_shows")
-}
-
-// getMaxID retrieves the maximum ID from a collection.
-func getMaxID(client *mongo.Client, collectionName string) int {
-	collection := client.Database("youvies").Collection(collectionName)
-	var result struct {
-		MaxID int `bson:"max_id"`
-	}
-	err := collection.FindOne(context.Background(), bson.M{}, options.FindOne().SetSort(bson.D{{Key: "id", Value: -1}})).Decode(&result)
-	if err != nil {
-		log.Printf("Failed to get max ID for %s: %v", collectionName, err)
-		return 0
-	}
-	return result.MaxID
 }
 
 // GetNextMovieID increments and returns the next movie ID.
 func GetNextMovieID() int {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
-	movieIDCounter++
+	movieIDCounter = rand2.Int()
 	return movieIDCounter
 }
 
@@ -54,7 +32,7 @@ func GetNextMovieID() int {
 func GetNextShowID() int {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
-	showIDCounter++
+	showIDCounter = rand2.Int()
 	return showIDCounter
 }
 
@@ -62,7 +40,7 @@ func GetNextShowID() int {
 func GetNextAnimeMovieID() int {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
-	animeMovieIDCounter++
+	animeMovieIDCounter = rand2.Int()
 	return animeMovieIDCounter
 }
 
@@ -70,6 +48,6 @@ func GetNextAnimeMovieID() int {
 func GetNextAnimeShowID() int {
 	counterMutex.Lock()
 	defer counterMutex.Unlock()
-	animeShowIDCounter++
+	animeShowIDCounter = rand2.Int()
 	return animeShowIDCounter
 }

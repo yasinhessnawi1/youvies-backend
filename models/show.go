@@ -4,19 +4,17 @@ type Show struct {
 	ID                  int                    `bson:"_id,omitempty" json:"id,omitempty"`
 	Title               string                 `bson:"title" json:"title"`
 	Overview            string                 `bson:"overview" json:"overview"`
-	Rating              float64                `bson:"rating" json:"rating"`
 	PosterPath          string                 `bson:"image_url" json:"image_url"`
 	Networks            []string               `bson:"networks" json:"networks"`
 	FirstAirDate        string                 `bson:"first_air_date" json:"first_air_date"`
-	Country             []string               `json:"country"`
+	Country             []string               `bson:"country" json:"country"`
 	Seasons             map[int]Season         `bson:"seasons" json:"seasons"`
-	Genres              []GenreMapping         `json:"genres"`
+	Genres              []GenreMapping         `bson:"genres" json:"genres"`
 	VoteAverage         float64                `json:"vote_average"`
 	VoteCount           int                    `json:"vote_count"`
 	OriginalLanguage    string                 `json:"original_language"`
 	Popularity          float64                `json:"popularity"`
 	BackdropPath        string                 `json:"backdrop_path"`
-	Adult               bool                   `json:"adult"`
 	ExternalIDs         map[string]interface{} `bson:"external_ids" json:"external_ids"`
 	ProductionCompanies []string               `json:"production_companies"`
 	ProductionCountries []string               `json:"production_countries"`

@@ -1,4 +1,4 @@
-FROM golang:1.21 as builder
+FROM golang:1.22 as builder
 
 # Label the stage and the maintainer of the Dockerfile.
 LABEL maintainer="yasinmh@stud.ntnu.no"

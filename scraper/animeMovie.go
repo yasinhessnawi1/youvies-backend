@@ -16,14 +16,14 @@ type AnimeMovieScraper struct {
 
 func NewAnimeMovieScraper() *AnimeMovieScraper {
 	return &AnimeMovieScraper{
-		BaseScraper: *NewBaseScraper("anime_movie", "https://kitsu.io/api/edge/anime"),
+		BaseScraper: *NewBaseScraper("anime_movie", utils.KitsuBaseURL),
 	}
 }
 
 // FetchAnimeMoviesFromKitsu fetches anime movie details from Kitsu with pagination
 func (s *AnimeMovieScraper) FetchAnimeMoviesFromKitsu() ([]models.AnimeResponse, error) {
 	var allAnimes []models.AnimeResponse
-	url := fmt.Sprintf("%s?filter[subtype]=movie", s.BaseScraper.BaseURL)
+	url := fmt.Sprintf("%s", s.BaseScraper.BaseURL)
 
 	for url != "" {
 		resp, err := http.Get(url)
@@ -63,14 +63,14 @@ func (s *AnimeMovieScraper) Scrape() error {
 
 			animeDoc := s.createAnimeMovieDoc(anime, genres)
 
-			exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, "anime_movies")
+			exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Title}, "anime_movies")
 			if err != nil {
 				log.Fatalf("Error checking if item exists: %v", err)
 			}
 			if exists {
 				continue
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Attributes.Titles.En)
+			torrents, err := utils.FetchTorrents(animeDoc.Title)
 			if err != nil {
 				log.Printf("error fetching torrents: %v", err)
 			}
@@ -79,19 +79,19 @@ func (s *AnimeMovieScraper) Scrape() error {
 
 			if exists {
 				var existingAnime models.AnimeMovie
-				if err := database.FindItem(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, "anime_movies", &existingAnime); err != nil {
+				if err := database.FindItem(map[string]interface{}{"title": animeDoc.Title}, "anime_movies", &existingAnime); err != nil {
 					log.Printf("Failed to fetch existing anime movie: %v", err)
 					continue
 				}
 				if s.hasAnimeMovieChanged(existingAnime, animeDoc, categorizedTorrents) {
-					if err := database.EditItem(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, animeDoc, "anime_movies"); err != nil {
-						log.Printf("Failed to update anime movie %s in database: %v", animeDoc.Attributes.Titles.En, err)
+					if err := database.EditItem(map[string]interface{}{"title": animeDoc.Title}, animeDoc, "anime_movies"); err != nil {
+						log.Printf("Failed to update anime movie %s in database: %v", animeDoc.Title, err)
 					}
 				}
 			} else {
 				animeDoc.ID = utils.GetNextMovieID()
-				if err := database.InsertItem(animeDoc, animeDoc.Attributes.Titles.En, "anime_movies"); err != nil {
-					log.Printf("Failed to save anime movie %s to database: %v", animeDoc.Attributes.Titles.En, err)
+				if err := database.InsertItem(animeDoc, animeDoc.Title, "anime_movies"); err != nil {
+					log.Printf("Failed to save anime movie %s to database: %v", animeDoc.Title, err)
 				}
 			}
 		}
@@ -102,12 +102,19 @@ func (s *AnimeMovieScraper) Scrape() error {
 
 // createAnimeMovieDoc constructs an anime movie document from Kitsu data.
 func (s *AnimeMovieScraper) createAnimeMovieDoc(anime models.Anime, genres []string) models.AnimeMovie {
+	title := anime.Attributes.CanonicalTitle
+	if title == "" {
+		title = anime.Attributes.Titles.EnJp
+		if title == "" {
+			title = anime.Attributes.Titles.EnJp
+		}
+	}
 	return models.AnimeMovie{
 		ID:            utils.GetNextAnimeMovieID(),
 		Attributes:    anime.Attributes,
 		Relationships: anime.Relationships,
 		Genres:        genres,
-		Title:         anime.Attributes.Titles.En,
+		Title:         title,
 	}
 }
 

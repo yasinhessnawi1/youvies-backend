@@ -45,11 +45,11 @@ func FetchTorrents(title string) ([]models.Torrent, error) {
 		"handjob", "penetration", "climax", "ejaculation", "bondage", "submission", "dominance",
 		"kink", "taboo", "swinger", "swinging", "adult toys", "sex toys", "lube", "lubricant",
 		"voyeurism", "exhibitionism", "smut", "brothel", "red light district", "x-rated", "raunchy",
-		"strip club", "naked", "bare", "risque", "provocative", "suggestive",
+		"strip club", "naked", "bare", "risque", "provocative", "suggestive", "ebooks", "mp3", "audio",
 	}
 
 	for _, torrent := range result.Data {
-		if !containsAny(torrent.Category, adultKeywords) && !containsAny(torrent.Name, adultKeywords) {
+		if !containsAny(strings.ToLower(torrent.Category), adultKeywords) && !containsAny(strings.ToLower(torrent.Name), adultKeywords) {
 			torrents = append(torrents, torrent)
 		}
 	}

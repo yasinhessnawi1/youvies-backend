@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
 	"youvies-backend/database"
@@ -14,7 +15,13 @@ import (
 
 // GetShows retrieves shows with pagination.
 func GetShows(c *gin.Context) {
-	collection := database.Client.Database("youvies").Collection("shows")
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_shows")
+	} else {
+		collection = database.Client.Database("youvies").Collection("shows")
+	}
 
 	// Read pagination parameters from URL query
 	pageStr := c.Query("page")
@@ -66,6 +73,13 @@ func GetShowByID(c *gin.Context) {
 
 // GetShowsByGenre retrieves shows by genre from the database.
 func GetShowsByGenre(c *gin.Context) {
+	version := c.Query("type")
+	var collection string
+	if version == "tiny" {
+		collection = version + "_shows"
+	} else {
+		collection = "shows"
+	}
 	genre := c.Param("genre")
 	// Read pagination parameters from URL query
 	pageStr := c.Query("page")
@@ -84,7 +98,7 @@ func GetShowsByGenre(c *gin.Context) {
 
 	skip := (page - 1) * pageSize
 	var shows []models.Show
-	err = database.FindMany(bson.D{{"genres.name", genre}}, "shows", &shows, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
+	err = database.FindMany(bson.D{{"genres.name", genre}}, collection, &shows, options.Find().SetSkip(int64(skip)).SetLimit(int64(pageSize)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -147,8 +161,14 @@ func DeleteShow(c *gin.Context) {
 
 // SearchShows searches shows by title.
 func SearchShows(c *gin.Context) {
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_shows")
+	} else {
+		collection = database.Client.Database("youvies").Collection("shows")
+	}
 	title := c.Query("title")
-	collection := database.Client.Database("youvies").Collection("shows")
 	cursor, err := collection.Find(context.Background(), bson.M{"title": bson.M{"$regex": title, "$options": "i"}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

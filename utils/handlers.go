@@ -16,36 +16,13 @@ func ExtractQuality(name string) string {
 	switch {
 	case strings.Contains(name, "1080p"):
 		return "1080p"
-	case strings.Contains(name, "720p"):
+	case strings.Contains(name, "720p") || strings.Contains(name, "dvd") || strings.Contains(name, "dvdrip") ||
+		strings.Contains(name, "web-dl") || strings.Contains(name, "webdl") || strings.Contains(name, "webrip"):
 		return "720p"
 	case strings.Contains(name, "480p"):
 		return "480p"
 	case strings.Contains(name, "4k"), strings.Contains(name, "2160p"):
 		return "4k"
-	case strings.Contains(name, "dvd"), strings.Contains(name, "dvdrip"):
-		return "DVD"
-	case strings.Contains(name, "web-dl"), strings.Contains(name, "webdl"), strings.Contains(name, "webrip"):
-		return "WEB-DL"
-	case strings.Contains(name, "hdrip"):
-		return "HDRip"
-	case strings.Contains(name, "bluray"), strings.Contains(name, "brrip"):
-		return "BluRay"
-	case strings.Contains(name, "hdtv"):
-		return "HDTV"
-	case strings.Contains(name, "web"):
-		return "WEB"
-	case strings.Contains(name, "cam"):
-		return "CAM"
-	case strings.Contains(name, "ts"):
-		return "TS"
-	case strings.Contains(name, "tc"):
-		return "TC"
-	case strings.Contains(name, "hdts"):
-		return "HDTS"
-	case strings.Contains(name, "hdcam"):
-		return "HDCAM"
-	case strings.Contains(name, "hdtc"):
-		return "HDTC"
 	default:
 		return "unknown"
 	}
@@ -231,7 +208,7 @@ func isFullSeasonTorrent(name string) bool {
 // FetchMissingTorrents fetches missing torrents for a show based on the season and episode numbers.
 func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seasonsInfo []models.SeasonInfo) ([]models.Torrent, error) {
 	var missingTorrents []models.Torrent
-
+	var notFound = 0
 	// Determine which episodes are missing
 	missingEpisodes := make(map[int][]int)
 	for _, seasonInfo := range seasonsInfo {
@@ -261,10 +238,6 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 
 	// Fetch missing torrents
 	for seasonNum, episodes := range missingEpisodes {
-		if len(episodes) < 5 {
-			delete(missingEpisodes, seasonNum)
-			continue
-		}
 		for _, episodeNum := range episodes {
 			query := fmt.Sprintf("%s S%02dE%02d", title, seasonNum, episodeNum)
 			torrents, err := FetchTorrents(query)
@@ -272,6 +245,14 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 				log.Printf("Failed to fetch torrents for %s: %v", query, err)
 				continue
 			}
+			if len(torrents) == 0 {
+				notFound++
+				if notFound > 15 {
+					delete(missingEpisodes, seasonNum)
+					break
+				}
+			}
+
 			missingTorrents = append(missingTorrents, torrents...)
 		}
 	}

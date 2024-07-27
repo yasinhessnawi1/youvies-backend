@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 	"youvies-backend/database"
@@ -38,6 +39,7 @@ func (ms *MovieScraper) Scrape() error {
 	if err != nil {
 		return fmt.Errorf("error fetching movie IDs from TMDB: %v", err)
 	}
+	sort.Strings(ids)
 	for _, id := range ids {
 		movieDetails, err := ms.FetchMovieDetailsFromTMDB(id)
 		if err != nil {
@@ -50,7 +52,9 @@ func (ms *MovieScraper) Scrape() error {
 			log.Printf("Database error: %v", err)
 			continue
 		}
-		if exists {
+
+		if exists && movieDetails.Title == "" {
+			log.Printf("Movie %s already exists in database", movieDetails.Title)
 			continue
 		}
 		torrents, err := utils.FetchTorrents(movieDetails.Title)

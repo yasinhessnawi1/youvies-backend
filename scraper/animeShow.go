@@ -16,7 +16,7 @@ type AnimeShowScraper struct {
 
 func NewAnimeShowScraper() *AnimeShowScraper {
 	return &AnimeShowScraper{
-		BaseScraper: *NewBaseScraper("anime_show", "https://kitsu.io/api/edge/anime"),
+		BaseScraper: *NewBaseScraper("anime_show", utils.KitsuBaseURL),
 	}
 }
 
@@ -72,11 +72,16 @@ func (s *AnimeShowScraper) Scrape() error {
 
 			animeDoc := s.createAnimeShowDoc(anime, genres)
 			animeDoc.Episodes = episodes
-			exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, "anime_shows")
+			exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Title}, "anime_shows")
 			if err != nil {
 				log.Fatalf("Error checking if item exists: %v", err)
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Attributes.Titles.En)
+
+			if exists && animeDoc.Title == "" {
+				log.Printf("Anime %s already exists in database", animeDoc.Title)
+				continue
+			}
+			torrents, err := utils.FetchTorrents(animeDoc.Title)
 			if err != nil {
 				log.Printf("error fetching torrents: %v", err)
 			}
@@ -86,20 +91,22 @@ func (s *AnimeShowScraper) Scrape() error {
 
 			missingEpisodes := s.checkForMissingEpisodes(animeDoc)
 			if len(missingEpisodes) > 0 {
-				missingTorrents, err := utils.FetchMissingTorrentsAnime(animeDoc.Attributes.Titles.En, missingEpisodes)
+				missingTorrents, err := utils.FetchMissingTorrentsAnime(animeDoc.Title, missingEpisodes)
 				if err != nil {
 					log.Printf("error fetching missing torrents: %v", err)
 				}
 				for _, torrent := range missingTorrents {
-					episodeNum := utils.GetEpisodeNumberFromTorrentName(torrent.Name)
-					quality := utils.ExtractQuality(torrent.Name)
-					if episode, ok := animeDoc.Seasons[1].Episodes[episodeNum]; ok {
-						episode.Torrents[quality] = append(episode.Torrents[quality], torrent)
-					} else {
-						animeDoc.Seasons[1].Episodes[episodeNum] = models.Episode{
-							Torrents: map[string][]models.Torrent{
-								quality: {torrent},
-							},
+					if torrent.Name != "" {
+						episodeNum := utils.GetEpisodeNumberFromTorrentName(torrent.Name)
+						quality := utils.ExtractQuality(torrent.Name)
+						if episode, ok := animeDoc.Seasons[1].Episodes[episodeNum]; ok {
+							episode.Torrents[quality] = append(episode.Torrents[quality], torrent)
+						} else {
+							animeDoc.Seasons[1].Episodes[episodeNum] = models.Episode{
+								Torrents: map[string][]models.Torrent{
+									quality: {torrent},
+								},
+							}
 						}
 					}
 				}
@@ -107,19 +114,19 @@ func (s *AnimeShowScraper) Scrape() error {
 
 			if exists {
 				var existingAnime models.AnimeShow
-				if err := database.FindItem(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, "anime_shows", &existingAnime); err != nil {
+				if err := database.FindItem(map[string]interface{}{"title": animeDoc.Title}, "anime_shows", &existingAnime); err != nil {
 					log.Printf("Failed to fetch existing anime show: %v", err)
 					continue
 				}
 				if s.hasAnimeShowChanged(existingAnime, animeDoc, categorizedTorrents) {
-					if err := database.EditItem(map[string]interface{}{"title": animeDoc.Attributes.Titles.En}, animeDoc, "anime_shows"); err != nil {
-						log.Printf("Failed to update anime show %s in database: %v", animeDoc.Attributes.Titles.En, err)
+					if err := database.EditItem(map[string]interface{}{"title": animeDoc.Title}, animeDoc, "anime_shows"); err != nil {
+						log.Printf("Failed to update anime show %s in database: %v", animeDoc.Title, err)
 					}
 				}
 			} else {
 				animeDoc.ID = utils.GetNextAnimeShowID()
-				if err := database.InsertItem(animeDoc, animeDoc.Attributes.Titles.En, "anime_shows"); err != nil {
-					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Attributes.Titles.En, err)
+				if err := database.InsertItem(animeDoc, animeDoc.Title, "anime_shows"); err != nil {
+					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
 				}
 			}
 		}
@@ -142,12 +149,19 @@ func (s *AnimeShowScraper) checkForMissingEpisodes(animeDoc models.AnimeShow) []
 
 // createAnimeShowDoc constructs an anime show document from Kitsu data.
 func (s *AnimeShowScraper) createAnimeShowDoc(anime models.Anime, genres []string) models.AnimeShow {
+	title := anime.Attributes.CanonicalTitle
+	if title == "" {
+		title = anime.Attributes.Titles.EnJp
+		if title == "" {
+			title = anime.Attributes.Titles.EnJp
+		}
+	}
 	return models.AnimeShow{
 		ID:            utils.GetNextAnimeShowID(),
 		Attributes:    anime.Attributes,
 		Relationships: anime.Relationships,
 		Genres:        genres,
-		Title:         anime.Attributes.Titles.En, // Including the title attribute
+		Title:         title, // Including the title attribute
 	}
 }
 

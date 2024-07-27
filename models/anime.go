@@ -16,16 +16,16 @@ type AnimeMovie struct {
 
 type AnimeShow struct {
 	ID      int            `json:"id"`
-	Title   string         `json:"title"`
+	Title   string         `bson:"title" json:"title"`
 	Seasons map[int]Season `bson:"seasons" json:"seasons"` // Transient field for processed torrents
 	Links   struct {
 		Self string `json:"self"`
 	} `json:"links"`
-	Attributes    Attributes           `json:"attributes"`
-	Relationships Relationships        `json:"relationships"`
-	Genres        []string             `json:"genres"`
-	Episodes      []EpisodeInfo        `json:"episodes"`
-	FullContent   map[string][]Torrent `json:"fullContent"`
+	Attributes    Attributes           `bson:"attributes" json:"attributes"`
+	Relationships Relationships        `bson:"relationships" json:"relationships"`
+	Genres        []string             `bson:"genres" json:"genres"`
+	Episodes      []EpisodeInfo        `bson:"episodes" json:"episodes"`
+	FullContent   map[string][]Torrent `bson:"fullContent" json:"fullContent"`
 }
 
 type Attributes struct {
