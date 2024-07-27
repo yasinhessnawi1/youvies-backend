@@ -58,10 +58,8 @@ func GetMovies(c *gin.Context) {
 // GetMovieByID retrieves a movie by its ID from the database.
 func GetMovieByID(c *gin.Context) {
 	id := c.Param("id")
-
 	var movie models.Movie
-	collection := database.Client.Database("youvies").Collection("movies")
-	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&movie); err != nil {
+	if err := database.FindItem(bson.D{{"id", id}}, "movies", &movie); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Movie not found"})
 		return
 	}
@@ -119,7 +117,7 @@ func CreateMovie(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Movie created successfully",
-		"ID":      strconv.Itoa(movie.ID),
+		"ID":      movie.ID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }

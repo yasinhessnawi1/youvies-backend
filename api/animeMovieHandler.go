@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
@@ -61,11 +62,10 @@ func GetAnimeMovies(c *gin.Context) {
 // GetAnimeMovieByID retrieves an anime movie by its ID from the database.
 func GetAnimeMovieByID(c *gin.Context) {
 	id := c.Param("id")
-
 	var animeMovie models.AnimeMovie
-	collection := database.Client.Database("youvies").Collection("anime_movies")
-	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&animeMovie); err != nil {
+	if err := database.FindItem(bson.D{{"_id", id}}, "anime_movies", &animeMovie); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Anime movie not found"})
+		fmt.Println(err, id)
 		return
 	}
 
@@ -122,7 +122,7 @@ func CreateAnimeMovie(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Anime movie created successfully",
-		"ID":      strconv.Itoa(animeMovie.ID),
+		"ID":      animeMovie.ID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }

@@ -3,6 +3,7 @@ package scraper
 import (
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
 	"youvies-backend/database"
@@ -124,7 +125,6 @@ func (s *AnimeShowScraper) Scrape() error {
 					}
 				}
 			} else {
-				animeDoc.ID = utils.GetNextAnimeShowID()
 				if err := database.InsertItem(animeDoc, animeDoc.Title, "anime_shows"); err != nil {
 					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
 				}
@@ -153,11 +153,11 @@ func (s *AnimeShowScraper) createAnimeShowDoc(anime models.Anime, genres []strin
 	if title == "" {
 		title = anime.Attributes.Titles.EnJp
 		if title == "" {
-			title = anime.Attributes.Titles.EnJp
+			title = anime.Attributes.Titles.En
 		}
 	}
 	return models.AnimeShow{
-		ID:            utils.GetNextAnimeShowID(),
+		ID:            primitive.NewObjectID(),
 		Attributes:    anime.Attributes,
 		Relationships: anime.Relationships,
 		Genres:        genres,

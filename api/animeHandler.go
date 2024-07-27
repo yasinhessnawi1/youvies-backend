@@ -63,7 +63,7 @@ func GetAnimeShowByID(c *gin.Context) {
 
 	var animeShow models.AnimeShow
 	collection := database.Client.Database("youvies").Collection("anime_shows")
-	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&animeShow); err != nil {
+	if err := collection.FindOne(context.Background(), bson.D{{"id", id}}).Decode(&animeShow); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Anime show not found"})
 		return
 	}
@@ -121,7 +121,7 @@ func CreateAnimeShow(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Anime show created successfully",
-		"ID":      strconv.Itoa(animeShow.ID),
+		"ID":      animeShow.ID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }

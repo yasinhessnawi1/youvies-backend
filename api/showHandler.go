@@ -60,10 +60,8 @@ func GetShows(c *gin.Context) {
 // GetShowByID retrieves a show by its ID from the database.
 func GetShowByID(c *gin.Context) {
 	id := c.Param("id")
-
 	var show models.Show
-	collection := database.Client.Database("youvies").Collection("shows")
-	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&show); err != nil {
+	if err := database.FindItem(bson.D{{"id", id}}, "shows", &show); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Show not found"})
 		return
 	}
@@ -121,7 +119,7 @@ func CreateShow(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Show created successfully",
-		"ID":      strconv.Itoa(show.ID),
+		"ID":      show.ID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }

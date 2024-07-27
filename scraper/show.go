@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"log"
 	"net/http"
@@ -38,7 +39,7 @@ func (ss *ShowScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
 	sort.Strings(ids)
 	for _, id := range ids {
 		wg.Add(1)
@@ -59,9 +60,15 @@ func (ss *ShowScraper) Scrape() error {
 				log.Printf("Database error: %v", err)
 				return
 			}
-			if exists && showDetails.Title == "" {
-				log.Printf("Show %s already exists in database", showDetails.Title)
-				return
+
+			var existingShow models.Show
+			var existingID primitive.ObjectID
+			if exists {
+				if err := database.FindItem(bson.M{"title": showDetails.Title}, "shows", &existingShow); err != nil {
+					log.Printf("Failed to fetch existing show: %v", err)
+					return
+				}
+				existingID = existingShow.ID
 			}
 
 			torrents, err := utils.FetchTorrents(showDetails.Title)
@@ -70,10 +77,9 @@ func (ss *ShowScraper) Scrape() error {
 				return
 			}
 
-			// Categorize torrents by seasons and episodes
 			categorizedTorrents, extra := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
 			showDetails.OtherTorrents = extra
-			// Check for missing episodes and fetch them if necessary
+
 			missingTorrents, err := utils.FetchMissingTorrents(showDetails.Title, torrents, showDetails.SeasonsInfo)
 			if err != nil {
 				log.Printf("Failed to fetch missing torrents for %s: %v", showDetails.Title, err)
@@ -102,24 +108,15 @@ func (ss *ShowScraper) Scrape() error {
 				}
 			}
 
-			// Update existing show if changes are found
 			if exists {
-				// Fetch existing show
-				var existingShow models.Show
-				if err := database.FindItem(bson.M{"title": showDetails.Title}, "shows", &existingShow); err != nil {
-					log.Printf("Failed to fetch existing show: %v", err)
-					return
-				}
-				// Check for updates
 				if ss.hasShowChanged(existingShow, showDetails, categorizedTorrents) {
-					show := ss.createShowDoc(showDetails, categorizedTorrents, existingShow.ID)
+					show := ss.createShowDoc(showDetails, categorizedTorrents, existingID)
 					if err := database.EditItem(bson.M{"title": show.Title}, show, "shows"); err != nil {
 						log.Printf("Failed to update show %s in database: %v", show.Title, err)
 					}
 				}
 			} else {
-				show := ss.createShowDoc(showDetails, categorizedTorrents, -1)
-				show.ID = utils.GetNextShowID()
+				show := ss.createShowDoc(showDetails, categorizedTorrents, primitive.NilObjectID)
 				if err := database.InsertItem(show, show.Title, "shows"); err != nil {
 					log.Printf("Failed to save show %s to database: %v", show.Title, err)
 				}
@@ -290,9 +287,10 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 }
 
 // createShowDoc constructs a show document from TMDB data.
-func (ss *ShowScraper) createShowDoc(showDetails *models.Show, torrents map[int]models.Season, id int) models.Show {
-	if id == -1 {
-		id = utils.GetNextShowID()
+func (ss *ShowScraper) createShowDoc(showDetails *models.Show, torrents map[int]models.Season, existingID primitive.ObjectID) models.Show {
+	id := existingID
+	if id.IsZero() {
+		id = primitive.NewObjectID()
 	}
 	return models.Show{
 		ID:                  id,

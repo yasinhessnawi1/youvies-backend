@@ -1,7 +1,9 @@
 package models
 
+import "go.mongodb.org/mongo-driver/bson/primitive"
+
 type Show struct {
-	ID                  int                    `bson:"_id,omitempty" json:"id,omitempty"`
+	ID                  primitive.ObjectID     `bson:"_id,omitempty"  json:"id,omitempty"`
 	Title               string                 `bson:"title" json:"title"`
 	Overview            string                 `bson:"overview" json:"overview"`
 	PosterPath          string                 `bson:"image_url" json:"image_url"`

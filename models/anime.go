@@ -1,9 +1,12 @@
 package models
 
-import "time"
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
+)
 
 type AnimeMovie struct {
-	ID       int                  `json:"id"`
+	ID       primitive.ObjectID   `bson:"_id,omitempty"  json:"id,omitempty"`
 	Title    string               `json:"title"`
 	Torrents map[string][]Torrent `bson:"torrents" json:"torrents"` // Transient field for processed torrents
 	Links    struct {
@@ -15,9 +18,9 @@ type AnimeMovie struct {
 }
 
 type AnimeShow struct {
-	ID      int            `json:"id"`
-	Title   string         `bson:"title" json:"title"`
-	Seasons map[int]Season `bson:"seasons" json:"seasons"` // Transient field for processed torrents
+	ID      primitive.ObjectID `bson:"_id,omitempty"  json:"id,omitempty"`
+	Title   string             `bson:"title" json:"title"`
+	Seasons map[int]Season     `bson:"seasons" json:"seasons"` // Transient field for processed torrents
 	Links   struct {
 		Self string `json:"self"`
 	} `json:"links"`

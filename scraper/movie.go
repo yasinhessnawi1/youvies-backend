@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"log"
 	"net/http"
@@ -48,12 +49,8 @@ func (ms *MovieScraper) Scrape() error {
 		}
 
 		exists, err := database.IfItemExists(bson.M{"title": movieDetails.Title}, "movies")
-		if err != nil {
-			log.Printf("Database error: %v", err)
-			continue
-		}
 
-		if exists && movieDetails.Title == "" {
+		if exists || movieDetails.Title == "" {
 			log.Printf("Movie %s already exists in database", movieDetails.Title)
 			continue
 		}
@@ -74,13 +71,13 @@ func (ms *MovieScraper) Scrape() error {
 			}
 			// Check for updates
 			if ms.hasMovieChanged(existingMovie, movieDetails, categorizedTorrents) {
-				movie := ms.createMovieDoc(movieDetails, categorizedTorrents, existingMovie.ID)
+				movie := ms.createMovieDoc(movieDetails, categorizedTorrents, primitive.NilObjectID)
 				if err := database.EditItem(bson.M{"title": movie.Title}, movie, "movies"); err != nil {
 					log.Printf("Failed to update movie %s in database: %v", movie.Title, err)
 				}
 			}
 		} else {
-			movie := ms.createMovieDoc(movieDetails, categorizedTorrents, -1)
+			movie := ms.createMovieDoc(movieDetails, categorizedTorrents, primitive.NilObjectID)
 			if err := database.InsertItem(movie, movie.Title, "movies"); err != nil {
 				log.Printf("Failed to save movie %s to database: %v", movie.Title, err)
 				continue
@@ -221,9 +218,10 @@ func (ms *MovieScraper) FetchMovieIDsFromTMDB() ([]string, error) {
 }
 
 // createMovieDoc constructs a movie document from TMDB and OMDB data.
-func (ms *MovieScraper) createMovieDoc(movieDetails *models.Movie, torrents map[string][]models.Torrent, id int) models.Movie {
-	if id == -1 {
-		id = utils.GetNextMovieID()
+func (ms *MovieScraper) createMovieDoc(movieDetails *models.Movie, torrents map[string][]models.Torrent, existingID primitive.ObjectID) models.Movie {
+	id := existingID
+	if id.IsZero() {
+		id = primitive.NewObjectID()
 	}
 	return models.Movie{
 		ID:               id,
