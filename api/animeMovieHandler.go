@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
@@ -62,8 +63,17 @@ func GetAnimeMovies(c *gin.Context) {
 // GetAnimeMovieByID retrieves an anime movie by its ID from the database.
 func GetAnimeMovieByID(c *gin.Context) {
 	id := c.Param("id")
+
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var animeMovie models.AnimeMovie
-	if err := database.FindItem(bson.D{{"_id", id}}, "anime_movies", &animeMovie); err != nil {
+	collection := database.Client.Database("youvies").Collection("anime_movies")
+	if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&animeMovie); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Anime movie not found"})
 		fmt.Println(err, id)
 		return
@@ -115,6 +125,11 @@ func CreateAnimeMovie(c *gin.Context) {
 		return
 	}
 
+	// Ensure the ID is set as an ObjectId
+	if animeMovie.ID == primitive.NilObjectID {
+		animeMovie.ID = primitive.NewObjectID()
+	}
+
 	err := database.InsertItem(animeMovie, animeMovie.Attributes.Titles.En, "anime_movies")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -125,39 +140,6 @@ func CreateAnimeMovie(c *gin.Context) {
 		"ID":      animeMovie.ID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
-}
-
-// UpdateAnimeMovie updates an existing anime movie in the database.
-func UpdateAnimeMovie(c *gin.Context) {
-	id := c.Param("id")
-
-	var animeMovie models.AnimeMovie
-	if err := c.BindJSON(&animeMovie); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err := database.EditItem(bson.M{"_id": id}, animeMovie, "anime_movies")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	result := map[string]string{
-		"message": "Anime movie updated successfully",
-	}
-	c.JSON(http.StatusOK, result)
-}
-
-// DeleteAnimeMovie deletes an anime movie from the database.
-func DeleteAnimeMovie(c *gin.Context) {
-	id := c.Param("id")
-
-	if err := database.DeleteItem(bson.M{"_id": id}, "anime_movies"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.Status(http.StatusNoContent)
 }
 
 // SearchAnimeMovies searches anime movies by title.
@@ -185,4 +167,51 @@ func SearchAnimeMovies(c *gin.Context) {
 
 	// Encode and send the result
 	c.JSON(http.StatusOK, animeMovies)
+}
+
+// UpdateAnimeMovie updates an existing anime movie in the database.
+func UpdateAnimeMovie(c *gin.Context) {
+	id := c.Param("id")
+
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var animeMovie models.AnimeMovie
+	if err := c.BindJSON(&animeMovie); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = database.EditItem(bson.M{"_id": objID}, animeMovie, "anime_movies")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	result := map[string]string{
+		"message": "Anime movie updated successfully",
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+// DeleteAnimeMovie deletes an anime movie from the database.
+func DeleteAnimeMovie(c *gin.Context) {
+	id := c.Param("id")
+
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	if err := database.DeleteItem(bson.M{"_id": objID}, "anime_movies"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

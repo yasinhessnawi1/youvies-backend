@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
@@ -60,8 +61,17 @@ func GetShows(c *gin.Context) {
 // GetShowByID retrieves a show by its ID from the database.
 func GetShowByID(c *gin.Context) {
 	id := c.Param("id")
+
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var show models.Show
-	if err := database.FindItem(bson.D{{"id", id}}, "shows", &show); err != nil {
+	collection := database.Client.Database("youvies").Collection("shows")
+	if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&show); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Show not found"})
 		return
 	}
@@ -119,7 +129,7 @@ func CreateShow(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Show created successfully",
-		"ID":      show.ID.Hex(),
+		"ID":      primitive.NewObjectID().Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }
@@ -128,13 +138,21 @@ func CreateShow(c *gin.Context) {
 func UpdateShow(c *gin.Context) {
 	id := c.Param("id")
 
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var show models.Show
 	if err := c.BindJSON(&show); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := database.EditItem(bson.M{"_id": id}, show, "shows")
+	collection := database.Client.Database("youvies").Collection("shows")
+	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": show})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -149,7 +167,16 @@ func UpdateShow(c *gin.Context) {
 func DeleteShow(c *gin.Context) {
 	id := c.Param("id")
 
-	if err := database.DeleteItem(bson.M{"_id": id}, "shows"); err != nil {
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	collection := database.Client.Database("youvies").Collection("shows")
+	_, err = collection.DeleteOne(context.Background(), bson.M{"_id": objID})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

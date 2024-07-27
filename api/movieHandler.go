@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
@@ -58,8 +59,17 @@ func GetMovies(c *gin.Context) {
 // GetMovieByID retrieves a movie by its ID from the database.
 func GetMovieByID(c *gin.Context) {
 	id := c.Param("id")
+
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var movie models.Movie
-	if err := database.FindItem(bson.D{{"id", id}}, "movies", &movie); err != nil {
+	collection := database.Client.Database("youvies").Collection("movies")
+	if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&movie); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Movie not found"})
 		return
 	}
@@ -117,7 +127,7 @@ func CreateMovie(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Movie created successfully",
-		"ID":      movie.ID.Hex(),
+		"ID":      primitive.NewObjectID().Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }
@@ -126,13 +136,21 @@ func CreateMovie(c *gin.Context) {
 func UpdateMovie(c *gin.Context) {
 	id := c.Param("id")
 
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var movie models.Movie
 	if err := c.BindJSON(&movie); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := database.EditItem(bson.M{"_id": id}, movie, "movies")
+	collection := database.Client.Database("youvies").Collection("movies")
+	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": objID}, bson.M{"$set": movie})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -147,7 +165,16 @@ func UpdateMovie(c *gin.Context) {
 func DeleteMovie(c *gin.Context) {
 	id := c.Param("id")
 
-	if err := database.DeleteItem(bson.M{"_id": id}, "movies"); err != nil {
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	collection := database.Client.Database("youvies").Collection("movies")
+	_, err = collection.DeleteOne(context.Background(), bson.M{"_id": objID})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

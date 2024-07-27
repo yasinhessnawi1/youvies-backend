@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"strconv"
@@ -61,9 +62,16 @@ func GetAnimeShows(c *gin.Context) {
 func GetAnimeShowByID(c *gin.Context) {
 	id := c.Param("id")
 
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var animeShow models.AnimeShow
 	collection := database.Client.Database("youvies").Collection("anime_shows")
-	if err := collection.FindOne(context.Background(), bson.D{{"id", id}}).Decode(&animeShow); err != nil {
+	if err := collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&animeShow); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Anime show not found"})
 		return
 	}
@@ -121,7 +129,7 @@ func CreateAnimeShow(c *gin.Context) {
 	}
 	result := map[string]string{
 		"message": "Anime show created successfully",
-		"ID":      animeShow.ID.Hex(),
+		"ID":      primitive.NilObjectID.Hex(),
 	}
 	c.JSON(http.StatusOK, result)
 }
@@ -130,13 +138,20 @@ func CreateAnimeShow(c *gin.Context) {
 func UpdateAnimeShow(c *gin.Context) {
 	id := c.Param("id")
 
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
 	var animeShow models.AnimeShow
 	if err := c.BindJSON(&animeShow); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := database.EditItem(bson.M{"_id": id}, animeShow, "anime_shows")
+	err = database.EditItem(bson.M{"_id": objID}, animeShow, "anime_shows")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -151,7 +166,14 @@ func UpdateAnimeShow(c *gin.Context) {
 func DeleteAnimeShow(c *gin.Context) {
 	id := c.Param("id")
 
-	if err := database.DeleteItem(bson.M{"_id": id}, "anime_shows"); err != nil {
+	// Convert the string ID to a MongoDB ObjectId
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	if err := database.DeleteItem(bson.M{"_id": objID}, "anime_shows"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
