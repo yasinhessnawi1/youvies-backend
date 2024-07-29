@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -303,6 +304,7 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
+	sort.Strings(ids)
 	return ids, nil
 }
 

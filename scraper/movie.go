@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 	"youvies-backend/database"
@@ -53,7 +54,7 @@ func (ms *MovieScraper) Scrape() error {
 			log.Printf("Movie %s already exists in database", movieDetails.Title)
 			continue
 		}
-		torrents, err := utils.FetchTorrents(movieDetails.OriginalTitle)
+		torrents, err := utils.FetchTorrents(movieDetails.Title)
 		if err != nil {
 			log.Printf("Failed to fetch torrents for %s: %v", movieDetails.Title, err)
 			continue
@@ -66,7 +67,6 @@ func (ms *MovieScraper) Scrape() error {
 			}
 		}
 		categorizedTorrents := utils.CategorizeTorrentsByQuality(torrents)
-
 		// Update existing movie if changes are found
 		if exists {
 			// Fetch existing movie
@@ -219,6 +219,7 @@ func (ms *MovieScraper) FetchMovieIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
+	sort.Strings(ids)
 	return ids, nil
 }
 

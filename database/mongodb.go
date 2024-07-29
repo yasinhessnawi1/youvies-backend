@@ -3,11 +3,13 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -38,21 +40,17 @@ func ConnectDB() {
 }
 
 func InsertItem(item interface{}, title string, collectionName string) error {
+	fmt.Printf("Inserting %s into %s collection\n", title, collectionName)
+
+	mu := sync.Mutex{}
+	mu.Lock()
+	defer mu.Unlock()
 	collection := Client.Database("youvies").Collection(collectionName)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	exist, err := IfItemExists(bson.M{"title": title}, collectionName)
+	_, err := collection.InsertOne(ctx, item)
 	if err != nil {
 		return err
-	}
-	if !exist {
-		_, err := collection.InsertOne(ctx, item)
-		if err != nil {
-			return err
-		}
-	} else {
-		return errors.New("item already exists")
-
 	}
 	return nil
 }

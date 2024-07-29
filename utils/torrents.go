@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,7 +23,16 @@ const (
 	DefaultClientPort = 42069
 )
 
-var mutex sync.Mutex
+var portMutex sync.Mutex
+var currentPort = DefaultClientPort
+
+// getUniquePort provides a unique port for each torrent client instance.
+func getUniquePort() int {
+	portMutex.Lock()
+	defer portMutex.Unlock()
+	currentPort++
+	return currentPort
+}
 
 func FetchTorrents(title string) ([]models.Torrent, error) {
 	var torrents []models.Torrent
@@ -41,7 +51,7 @@ func FetchTorrents(title string) ([]models.Torrent, error) {
 	}(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	if err != nil && resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error reading response body: %v", err)
 	}
 
@@ -51,13 +61,13 @@ func FetchTorrents(title string) ([]models.Torrent, error) {
 	}
 
 	var movieCategories = []string{
-		"movie", "film", "cinema", "blockbuster", "feature film",
+		"movie", "movies", "film", "cinema", "blockbuster", "feature film",
 		"motion picture", "flick", "biopic", "documentary", "short film",
 		"thriller", "comedy", "drama", "action", "adventure",
 		"animation", "crime", "fantasy", "historical", "horror",
 		"musical", "mystery", "romance", "sci-fi", "science fiction",
 		"war", "western", "independent film", "indie film", "art house",
-		"silent film", "noir", "cult film", "Video > Movies", "Video > HD - TV shows",
+		"silent film", "noir", "cult film", "Video > Movies", "Video > HD - TV movies",
 	}
 	var showCategories = []string{
 		"show", "shows", "tv show", "tv shows", "television show", "series", "tv series",
@@ -87,11 +97,10 @@ func FetchTorrents(title string) ([]models.Torrent, error) {
 			torrents = append(torrents, torrent)
 		}
 	}
-
-	fmt.Printf("Found %d torrents for %s: %s \n", len(torrents), title, url)
 	if len(torrents) == 0 {
 		return nil, fmt.Errorf("no torrents found for title: %s", title)
 	}
+	fmt.Printf("Found %d torrents for %s: %s \n", len(torrents), torrents[0].Category+title, url)
 
 	return torrents, nil
 }
@@ -106,8 +115,7 @@ func containsAny(text string, items []string) bool {
 	}
 	return false
 }
-
-func SaveMetadata(magnetURI, torrentName string) error {
+func extractMetaData(magnetURI string) error {
 	if !strings.HasPrefix(magnetURI, "magnet:") {
 		return fmt.Errorf("invalid magnet URI: %s", magnetURI)
 	}
@@ -122,68 +130,74 @@ func SaveMetadata(magnetURI, torrentName string) error {
 	clientConfig := torrent.NewDefaultClientConfig()
 	clientConfig.DataDir = dirPath
 	clientConfig.ListenPort = getUniquePort()
+	clientConfig.NoDefaultPortForwarding = true
 
 	torrentClient, err := torrent.NewClient(clientConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create torrent client: %w", err)
 	}
+	defer torrentClient.Close()
 
 	t, err := torrentClient.AddMagnet(magnetURI)
 	if err != nil {
-		torrentClient.Close()
 		return fmt.Errorf("failed to add magnet: %w", err)
 	}
 
-	mutex.Lock()
 	<-t.GotInfo()
 	mi := t.Metainfo()
-	mutex.Unlock()
-	infoHash := t.InfoHash().HexString()
-	filePath := filepath.Join(dirPath, infoHash+".torrent")
 
+	infoHash := t.InfoHash().HexString()
+	exists, err := database.IfItemExists(bson.M{"_id": infoHash}, "torrent_files")
+	if exists {
+		return nil
+	}
+
+	filePath := filepath.Join(dirPath, infoHash+".torrent")
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		f, err := os.Create(filePath)
 		if err != nil {
-			torrentClient.Close()
 			return fmt.Errorf("failed to create metadata file: %w", err)
 		}
 		defer f.Close()
 
 		err = mi.Write(f)
 		if err != nil {
-			torrentClient.Close()
 			return fmt.Errorf("failed to write metadata to file: %w", err)
 		}
 	}
 
-	exists, err := database.IfItemExists(bson.M{"_id": infoHash}, "torrent_files")
-	if exists {
-		torrentClient.Close()
-		return nil
-	}
-
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		torrentClient.Close()
 		return fmt.Errorf("failed to read metadata file: %w", err)
 	}
 
 	err = storeTorrentFileInDB(infoHash, content)
 	if err != nil {
-		torrentClient.Close()
 		return fmt.Errorf("failed to store torrent file in database: %w", err)
 	}
 
-	torrentClient.Close()
+	// Ensure the file handle is released before attempting to delete
+	time.Sleep(100 * time.Millisecond)
 
 	// Retry file deletion
-	err = retry(3, 1000*time.Millisecond, func() error {
+	err = retry(3, 100*time.Millisecond, func() error {
 		return os.RemoveAll(dirPath)
 	})
 	if err != nil {
 		log.Printf("Failed to delete directory %s after retries: %v", dirPath, err)
 	}
 
+	return nil
+}
+
+func SaveMetadata(magnetURI, torrentName string) error {
+	go func() {
+		err := extractMetaData(magnetURI)
+		if err != nil {
+			fmt.Errorf("failed to extract metadata for %s: %w", torrentName, err)
+			return
+		}
+	}()
 	return nil
 }
 
@@ -200,17 +214,7 @@ func storeTorrentFileInDB(infoHash string, content []byte) error {
 }
 
 func generateUniqueID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
-}
-
-var portMutex sync.Mutex
-var currentPort = DefaultClientPort
-
-func getUniquePort() int {
-	portMutex.Lock()
-	defer portMutex.Unlock()
-	currentPort++
-	return currentPort
+	return fmt.Sprintf("%d", rand.Int()+time.Now().Nanosecond())
 }
 
 func retry(attempts int, sleep time.Duration, f func() error) error {
