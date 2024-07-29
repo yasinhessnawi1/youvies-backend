@@ -18,4 +18,5 @@ type Torrent struct {
 	Poster   string `bson:"poster" json:"poster"`
 	Magnet   string `bson:"magnet" json:"magnet"`
 	Hash     string `bson:"hash" json:"hash"`
+	MetaInfo string `bson:"metaInfo" json:"metaInfo"`
 }

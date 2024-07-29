@@ -71,9 +71,16 @@ func (s *AnimeMovieScraper) Scrape() error {
 			if exists {
 				continue
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Title)
+			torrents, err := utils.FetchTorrents(animeDoc.Attributes.CanonicalTitle)
 			if err != nil {
 				log.Printf("error fetching torrents: %v", err)
+			}
+			for _, torrent := range torrents {
+				err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
+				if err != nil {
+					log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+					continue
+				}
 			}
 			categorizedTorrents := utils.CategorizeTorrentsByQuality(torrents)
 			animeDoc.Torrents = categorizedTorrents

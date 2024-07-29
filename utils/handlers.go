@@ -208,7 +208,6 @@ func isFullSeasonTorrent(name string) bool {
 // FetchMissingTorrents fetches missing torrents for a show based on the season and episode numbers.
 func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seasonsInfo []models.SeasonInfo) ([]models.Torrent, error) {
 	var missingTorrents []models.Torrent
-	var notFound = 0
 	// Determine which episodes are missing
 	missingEpisodes := make(map[int][]int)
 	for _, seasonInfo := range seasonsInfo {
@@ -245,16 +244,18 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 				log.Printf("Failed to fetch torrents for %s: %v", query, err)
 				continue
 			}
-			if len(torrents) == 0 {
-				notFound++
-				if notFound > 15 {
-					delete(missingEpisodes, seasonNum)
-					break
+			for _, torrent := range torrents {
+				err := SaveMetadata(torrent.Magnet, torrent.Name)
+				if err != nil {
+					log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+					continue
 				}
 			}
-
 			missingTorrents = append(missingTorrents, torrents...)
 		}
+	}
+	if len(missingTorrents) < len(missingEpisodes)-5 {
+		return nil, fmt.Errorf("Error fetching all messing episodes: actual missing number %d, found %d ", len(missingEpisodes), len(missingTorrents))
 	}
 
 	return missingTorrents, nil

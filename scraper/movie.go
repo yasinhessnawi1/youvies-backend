@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"time"
 	"youvies-backend/database"
@@ -40,7 +39,7 @@ func (ms *MovieScraper) Scrape() error {
 	if err != nil {
 		return fmt.Errorf("error fetching movie IDs from TMDB: %v", err)
 	}
-	sort.Strings(ids)
+
 	for _, id := range ids {
 		movieDetails, err := ms.FetchMovieDetailsFromTMDB(id)
 		if err != nil {
@@ -54,10 +53,17 @@ func (ms *MovieScraper) Scrape() error {
 			log.Printf("Movie %s already exists in database", movieDetails.Title)
 			continue
 		}
-		torrents, err := utils.FetchTorrents(movieDetails.Title)
+		torrents, err := utils.FetchTorrents(movieDetails.OriginalTitle)
 		if err != nil {
 			log.Printf("Failed to fetch torrents for %s: %v", movieDetails.Title, err)
 			continue
+		}
+		for _, torrent := range torrents {
+			err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
+			if err != nil {
+				log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+				continue
+			}
 		}
 		categorizedTorrents := utils.CategorizeTorrentsByQuality(torrents)
 

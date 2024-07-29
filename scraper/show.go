@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -40,7 +39,6 @@ func (ss *ShowScraper) Scrape() error {
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
-	sort.Strings(ids)
 	for _, id := range ids {
 		wg.Add(1)
 		semaphore <- struct{}{}
@@ -75,6 +73,13 @@ func (ss *ShowScraper) Scrape() error {
 			if err != nil {
 				log.Printf("Failed to fetch torrents for %s: %v", showDetails.Title, err)
 				return
+			}
+			for _, torrent := range torrents {
+				err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
+				if err != nil {
+					log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+					continue
+				}
 			}
 
 			categorizedTorrents, extra := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)

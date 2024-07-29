@@ -18,8 +18,6 @@ func ConnectDB() {
 	if uri == "" {
 		log.Println("MONGO_URI not found in environment, using default URI")
 	}
-	log.Println(uri)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
