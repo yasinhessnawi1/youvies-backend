@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -74,6 +75,14 @@ func (ss *ShowScraper) Scrape() error {
 				log.Printf("Failed to fetch torrents for %s: %v", showDetails.Title, err)
 				return
 			}
+
+			categorizedTorrents := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
+
+			missingTorrents, err := utils.FetchMissingTorrents(showDetails.Title, torrents, showDetails.SeasonsInfo)
+			if err != nil {
+				log.Printf("Failed to fetch missing torrents for %s: %v", showDetails.Title, err)
+				return
+			}
 			for _, torrent := range torrents {
 				err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
 				if err != nil {
@@ -81,18 +90,8 @@ func (ss *ShowScraper) Scrape() error {
 					continue
 				}
 			}
-
-			categorizedTorrents, extra := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
-			showDetails.OtherTorrents = extra
-
-			missingTorrents, err := utils.FetchMissingTorrents(showDetails.Title, torrents, showDetails.SeasonsInfo)
-			if err != nil {
-				log.Printf("Failed to fetch missing torrents for %s: %v", showDetails.Title, err)
-				return
-			}
 			if len(missingTorrents) > 0 {
-				missingCategorizedTorrents, extra := utils.CategorizeTorrentsBySeasonsAndEpisodes(missingTorrents)
-				showDetails.OtherTorrents = append(showDetails.OtherTorrents, extra...)
+				missingCategorizedTorrents := utils.CategorizeTorrentsBySeasonsAndEpisodes(missingTorrents)
 				for seasonNum, season := range missingCategorizedTorrents {
 					if _, exists := categorizedTorrents[seasonNum]; !exists {
 						categorizedTorrents[seasonNum] = season
@@ -287,7 +286,7 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
-
+	sort.Strings(ids)
 	return ids, nil
 }
 

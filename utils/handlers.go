@@ -254,22 +254,16 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 			missingTorrents = append(missingTorrents, torrents...)
 		}
 	}
-	if len(missingTorrents) < len(missingEpisodes)-5 {
-		return nil, fmt.Errorf("Error fetching all messing episodes: actual missing number %d, found %d ", len(missingEpisodes), len(missingTorrents))
-	}
-
 	return missingTorrents, nil
 }
 
 // CategorizeTorrentsBySeasonsAndEpisodes categorizes torrents by their respective seasons and episodes.
-func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) (map[int]models.Season, []models.Torrent) {
+func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) map[int]models.Season {
 	seasons := make(map[int]models.Season)
-	extra := make([]models.Torrent, 0)
 
 	for _, torrent := range torrents {
 		seasonNum, episodeNum, err := ExtractSeasonAndEpisode(torrent.Name)
 		if err != nil {
-			extra = append(extra, torrent)
 			continue
 		}
 		if seasonNum == 0 {
@@ -301,7 +295,7 @@ func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) (map[int]
 		}
 	}
 
-	return seasons, extra
+	return seasons
 }
 
 // CategorizeTorrentsByQuality categorizes torrents by their quality.

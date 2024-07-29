@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
+	"sort"
 	"youvies-backend/database"
 	"youvies-backend/models"
 	"youvies-backend/utils"
@@ -45,6 +46,9 @@ func (s *AnimeMovieScraper) FetchAnimeMoviesFromKitsu() ([]models.AnimeResponse,
 		}
 	}
 	fmt.Printf("found this many anime movies: %d\n", len(allAnimes))
+	sort.Slice(allAnimes, func(i, j int) bool {
+		return i > j
+	})
 	return allAnimes, nil
 }
 

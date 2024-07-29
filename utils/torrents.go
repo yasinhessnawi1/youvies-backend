@@ -176,7 +176,7 @@ func SaveMetadata(magnetURI, torrentName string) error {
 	torrentClient.Close()
 
 	// Retry file deletion
-	err = retry(3, 100*time.Millisecond, func() error {
+	err = retry(3, 1000*time.Millisecond, func() error {
 		return os.RemoveAll(dirPath)
 	})
 	if err != nil {
