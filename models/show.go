@@ -23,7 +23,7 @@ type Show struct {
 	SpokenLanguages     []string               `json:"spoken_languages"`
 	LastUpdated         string                 `bson:"last_updated" json:"last_updated"` // Unix timestamp of last update
 	SeasonsInfo         []SeasonInfo           `bson:"seasons_info" json:"seasons_info"`
-	OtherTorrents       []Torrent              `bson:"other_torrents" json:"other_torrents"`
+	OtherTorrents       map[string][]Torrent   `bson:"other_torrents" json:"other_torrents"`
 }
 type SeasonInfo struct {
 	SeasonNumber int    `json:"season_number"`

@@ -134,9 +134,10 @@ func SaveMetadata(magnetURI, torrentName string) error {
 		return fmt.Errorf("failed to add magnet: %w", err)
 	}
 
+	mutex.Lock()
 	<-t.GotInfo()
 	mi := t.Metainfo()
-
+	mutex.Unlock()
 	infoHash := t.InfoHash().HexString()
 	filePath := filepath.Join(dirPath, infoHash+".torrent")
 

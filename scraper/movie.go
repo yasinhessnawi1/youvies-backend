@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"time"
 	"youvies-backend/database"
@@ -220,7 +219,6 @@ func (ms *MovieScraper) FetchMovieIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
-	sort.Strings(ids)
 	return ids, nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -76,22 +75,40 @@ func (ss *ShowScraper) Scrape() error {
 				return
 			}
 
-			categorizedTorrents := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
-
+			categorizedTorrents, fullcontent := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
+			showDetails.OtherTorrents = fullcontent
 			missingTorrents, err := utils.FetchMissingTorrents(showDetails.Title, torrents, showDetails.SeasonsInfo)
 			if err != nil {
 				log.Printf("Failed to fetch missing torrents for %s: %v", showDetails.Title, err)
 				return
 			}
-			for _, torrent := range torrents {
-				err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-				if err != nil {
-					log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-					continue
-				}
-			}
+
 			if len(missingTorrents) > 0 {
-				missingCategorizedTorrents := utils.CategorizeTorrentsBySeasonsAndEpisodes(missingTorrents)
+				missingCategorizedTorrents, fullContent1 := utils.CategorizeTorrentsBySeasonsAndEpisodes(missingTorrents)
+				showDetails.OtherTorrents = utils.JoinMaps(fullcontent, fullContent1)
+				for _, torrent := range categorizedTorrents {
+					for _, episode := range torrent.Episodes {
+						for _, torrent := range episode.Torrents {
+							for _, torrent := range torrent {
+								err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
+								if err != nil {
+									log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+									continue
+								}
+							}
+
+						}
+					}
+				}
+				for _, content := range showDetails.OtherTorrents {
+					for _, torrent := range content {
+						err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
+						if err != nil {
+							log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
+							continue
+						}
+					}
+				}
 				for seasonNum, season := range missingCategorizedTorrents {
 					if _, exists := categorizedTorrents[seasonNum]; !exists {
 						categorizedTorrents[seasonNum] = season
@@ -286,7 +303,6 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
-	sort.Strings(ids)
 	return ids, nil
 }
 

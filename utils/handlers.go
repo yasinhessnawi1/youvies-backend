@@ -258,10 +258,14 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 }
 
 // CategorizeTorrentsBySeasonsAndEpisodes categorizes torrents by their respective seasons and episodes.
-func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) map[int]models.Season {
+func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) (map[int]models.Season, map[string][]models.Torrent) {
 	seasons := make(map[int]models.Season)
-
+	fullContent := make(map[string][]models.Torrent)
 	for _, torrent := range torrents {
+		if isFullSeasonTorrent(torrent.Name) {
+			fullContent[torrent.Name] = append(fullContent[torrent.Name], torrent)
+			continue
+		}
 		seasonNum, episodeNum, err := ExtractSeasonAndEpisode(torrent.Name)
 		if err != nil {
 			continue
@@ -295,7 +299,7 @@ func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) map[int]m
 		}
 	}
 
-	return seasons
+	return seasons, fullContent
 }
 
 // CategorizeTorrentsByQuality categorizes torrents by their quality.
@@ -309,4 +313,12 @@ func CategorizeTorrentsByQuality(torrents []models.Torrent) map[string][]models.
 		SortTorrentsBySeeders(categorized[quality])
 	}
 	return categorized
+}
+
+// JoinMaps merges map2 into map1
+func JoinMaps(map1, map2 map[string][]models.Torrent) map[string][]models.Torrent {
+	for key, value := range map2 {
+		map1[key] = value
+	}
+	return map1
 }
