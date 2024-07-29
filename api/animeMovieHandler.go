@@ -215,3 +215,54 @@ func DeleteAnimeMovie(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// GetAnimeMovieByVoteAverage retrieves anime movies by vote average from the database.
+// The vote average is a float value, so it must be parsed from the URL parameter.
+// The movies with a vote average greater than or equal to the provided value are returned.
+func GetAnimeMovieByVoteAverage(c *gin.Context) {
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_anime_movies")
+	} else {
+		collection = database.Client.Database("youvies").Collection("anime_movies")
+	}
+
+	// Read pagination parameters from URL query
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	skip := (page - 1) * pageSize
+
+	// Define the sorting options
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(pageSize))
+	findOptions.SetSort(bson.D{{"attributes.voteAverage", -1}})
+
+	// Find the movies sorted by vote count
+	cursor, err := collection.Find(context.Background(), bson.M{}, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var animeMovies []models.AnimeMovie
+	if err = cursor.All(context.Background(), &animeMovies); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, animeMovies)
+}

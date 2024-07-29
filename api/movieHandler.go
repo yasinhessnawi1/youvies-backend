@@ -207,3 +207,103 @@ func SearchMovies(c *gin.Context) {
 
 	c.JSON(http.StatusOK, movies)
 }
+
+// GetMovieByVoteAverage retrieves movies ordered by vote count, filtered by vote average.
+func GetMovieByVoteAverage(c *gin.Context) {
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_movies")
+	} else {
+		collection = database.Client.Database("youvies").Collection("movies")
+	}
+
+	// Read pagination parameters from URL query
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
+
+	// Set default values if parameters are not provided
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	skip := (page - 1) * pageSize
+
+	// Define the sorting options
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(pageSize))
+	findOptions.SetSort(bson.D{{"vote_average", -1}})
+
+	// Find the movies sorted by vote count
+	cursor, err := collection.Find(context.Background(), bson.M{}, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var movies []models.Movie
+	if err = cursor.All(context.Background(), &movies); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, movies)
+}
+
+// GetMovieByVoteCount retrieves movies ordered by vote count.
+func GetMovieByVoteCount(c *gin.Context) {
+	version := c.Query("type")
+	var collection *mongo.Collection
+	if version == "tiny" {
+		collection = database.Client.Database("youvies").Collection("tiny_movies")
+	} else {
+		collection = database.Client.Database("youvies").Collection("movies")
+	}
+
+	// Read pagination parameters from URL query
+	pageStr := c.Query("page")
+	pageSizeStr := c.Query("pageSize")
+
+	// Set default values if parameters are not provided
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	skip := (page - 1) * pageSize
+
+	// Define the sorting options
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(pageSize))
+	findOptions.SetSort(bson.D{{"vote_count", -1}})
+
+	// Find the movies sorted by vote count
+	cursor, err := collection.Find(context.Background(), bson.M{}, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var movies []models.Movie
+	if err = cursor.All(context.Background(), &movies); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, movies)
+}

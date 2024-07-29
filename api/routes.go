@@ -13,6 +13,8 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/youvies/v1/movies/search", AuthMiddleware("user"), SearchMovies)
 	r.GET("/youvies/v1/movies/genre/:genre", AuthMiddleware("user"), GetMoviesByGenre)
 	r.GET("/youvies/v1/movies/:id", AuthMiddleware("user"), GetMovieByID)
+	r.GET("/youvies/v1/movies/voteAverage", AuthMiddleware("user"), GetMovieByVoteAverage)
+	r.GET("/youvies/v1/movies/voteCount", AuthMiddleware("user"), GetMovieByVoteCount)
 
 	// Anime Shows Endpoints
 	r.GET("/youvies/v1/animeshows", AuthMiddleware("user"), GetAnimeShows)
@@ -22,6 +24,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/youvies/v1/animeshows/search", AuthMiddleware("user"), SearchAnimeShows)
 	r.GET("/youvies/v1/animeshows/genre/:genre", AuthMiddleware("user"), GetAnimeShowsByGenre)
 	r.GET("/youvies/v1/animeshows/:id", AuthMiddleware("user"), GetAnimeShowByID)
+	r.GET("/youvies/v1/animeshows/voteAverage", AuthMiddleware("user"), GetAnimeShowByVoteAverage)
 
 	// Anime Movies Endpoints
 	r.GET("/youvies/v1/animemovies", AuthMiddleware("user"), GetAnimeMovies)
@@ -31,6 +34,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/youvies/v1/animemovies/search", AuthMiddleware("user"), SearchAnimeMovies)
 	r.GET("/youvies/v1/animemovies/genre/:genre", AuthMiddleware("user"), GetAnimeMoviesByGenre)
 	r.GET("/youvies/v1/animemovies/:id", AuthMiddleware("user"), GetAnimeMovieByID)
+	r.GET("/youvies/v1/animemovies/voteAverage", AuthMiddleware("user"), GetAnimeMovieByVoteAverage)
 
 	// Shows Endpoints
 	r.GET("/youvies/v1/shows", AuthMiddleware("user"), GetShows)
@@ -40,6 +44,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/youvies/v1/shows/search", AuthMiddleware("user"), SearchShows)
 	r.GET("/youvies/v1/shows/genre/:genre", AuthMiddleware("user"), GetShowsByGenre)
 	r.GET("/youvies/v1/shows/:id", AuthMiddleware("user"), GetShowByID)
+	r.GET("/youvies/v1/shows/voteAverage", AuthMiddleware("user"), GetShowByVoteAverage)
 
 	// User Endpoints
 	r.POST("/youvies/v1/api/register", RegisterUser)
