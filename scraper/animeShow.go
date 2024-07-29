@@ -94,29 +94,6 @@ func (s *AnimeShowScraper) Scrape() error {
 			categorizedTorrents, fullContent := utils.CategorizeAnimeTorrentsBySeasonsAndEpisodes(torrents, anime.Attributes.EpisodeCount)
 			animeDoc.Seasons = categorizedTorrents
 			animeDoc.FullContent = fullContent
-			for _, torrent := range categorizedTorrents {
-				for _, episode := range torrent.Episodes {
-					for _, torrent := range episode.Torrents {
-						for _, torrent := range torrent {
-							err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-							if err != nil {
-								log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-								continue
-							}
-						}
-
-					}
-				}
-			}
-			for _, content := range fullContent {
-				for _, torrent := range content {
-					err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-					if err != nil {
-						log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-						continue
-					}
-				}
-			}
 			missingEpisodes := s.checkForMissingEpisodes(animeDoc)
 			if len(missingEpisodes) > 0 {
 				missingTorrents, err := utils.FetchMissingTorrentsAnime(animeDoc.Title, missingEpisodes)
@@ -124,11 +101,6 @@ func (s *AnimeShowScraper) Scrape() error {
 					log.Printf("error fetching missing torrents: %v", err)
 				}
 				for _, torrent := range missingTorrents {
-					err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-					if err != nil {
-						log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-						continue
-					}
 					if torrent.Name != "" {
 						episodeNum := utils.GetEpisodeNumberFromTorrentName(torrent.Name)
 						quality := utils.ExtractQuality(torrent.Name)

@@ -244,13 +244,7 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 				log.Printf("Failed to fetch torrents for %s: %v", query, err)
 				continue
 			}
-			for _, torrent := range torrents {
-				err := SaveMetadata(torrent.Magnet, torrent.Name)
-				if err != nil {
-					log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-					continue
-				}
-			}
+
 			missingTorrents = append(missingTorrents, torrents...)
 		}
 	}

@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"youvies-backend/models"
 )
@@ -44,13 +43,7 @@ func FetchMissingTorrentsAnime(title string, episodes []models.EpisodeInfo) ([]m
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch torrents for %s: %v", query, err)
 		}
-		for _, torrent := range torrents {
-			err := SaveMetadata(torrent.Magnet, torrent.Name)
-			if err != nil {
-				log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-				continue
-			}
-		}
+
 		missingTorrents = append(missingTorrents, torrents...)
 	}
 	return missingTorrents, nil

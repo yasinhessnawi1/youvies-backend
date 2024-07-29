@@ -46,6 +46,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.POST("/youvies/v1/api/login", LoginUser)
 	r.POST("/youvies/v1/api/logout", AuthMiddleware("user"), LogoutUser)
 	r.PUT("/youvies/v1/api/user", AuthMiddleware("user"), EditUser)
-	r.GET("/torrents/:id", GetTorrentFile)
+	r.GET("/stream", streamHandler)
+	r.GET("/stream/flush", deleteStreamCache)
 
 }

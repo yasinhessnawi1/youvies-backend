@@ -59,13 +59,7 @@ func (ms *MovieScraper) Scrape() error {
 			log.Printf("Failed to fetch torrents for %s: %v", movieDetails.Title, err)
 			continue
 		}
-		for _, torrent := range torrents {
-			err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-			if err != nil {
-				log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-				continue
-			}
-		}
+
 		categorizedTorrents := utils.CategorizeTorrentsByQuality(torrents)
 		// Update existing movie if changes are found
 		if exists {

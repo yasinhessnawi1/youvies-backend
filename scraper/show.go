@@ -39,7 +39,7 @@ func (ss *ShowScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
 	for _, id := range ids {
 		wg.Add(1)
 		semaphore <- struct{}{}
@@ -87,29 +87,6 @@ func (ss *ShowScraper) Scrape() error {
 			if len(missingTorrents) > 0 {
 				missingCategorizedTorrents, fullContent1 := utils.CategorizeTorrentsBySeasonsAndEpisodes(missingTorrents)
 				showDetails.OtherTorrents = utils.JoinMaps(fullcontent, fullContent1)
-				for _, torrent := range categorizedTorrents {
-					for _, episode := range torrent.Episodes {
-						for _, torrent := range episode.Torrents {
-							for _, torrent := range torrent {
-								err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-								if err != nil {
-									log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-									continue
-								}
-							}
-
-						}
-					}
-				}
-				for _, content := range showDetails.OtherTorrents {
-					for _, torrent := range content {
-						err := utils.SaveMetadata(torrent.Magnet, torrent.Name)
-						if err != nil {
-							log.Printf("Failed to save torrent metadata for %s: %v", torrent.Name, err)
-							continue
-						}
-					}
-				}
 				for seasonNum, season := range missingCategorizedTorrents {
 					if _, exists := categorizedTorrents[seasonNum]; !exists {
 						categorizedTorrents[seasonNum] = season
