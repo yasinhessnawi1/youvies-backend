@@ -4,7 +4,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type Movie struct {
 	ID               primitive.ObjectID     `bson:"_id,omitempty"  json:"id,omitempty"`
-	OriginalLanguage string                 `bson:"original_language" json:"original_language"`
+	OriginalLanguage string                 `bson:"original_language,omitempty" json:"original_language,omitempty"`
 	OriginalTitle    string                 `bson:"original_title" json:"original_title"`
 	Overview         string                 `bson:"overview" json:"overview"`
 	Popularity       float64                `bson:"popularity" json:"popularity"`
@@ -14,11 +14,11 @@ type Movie struct {
 	VoteAverage      float64                `bson:"vote_average" json:"vote_average"`
 	VoteCount        int                    `bson:"vote_count" json:"vote_count"`
 	BackdropPath     string                 `bson:"backdrop_path" json:"backdrop_path"`
-	Adult            bool                   `bson:"adult" json:"adult"`
+	Adult            bool                   `bson:"adult,omitempty" json:"adult,omitempty"`
 	Genres           []GenreMapping         `bson:"genres" json:"genres"`
-	Torrents         map[string][]Torrent   `bson:"torrents" json:"torrents"`
-	ExternalIDs      map[string]interface{} `bson:"external_ids" json:"external_ids"`
-	LastUpdated      string                 `bson:"last_updated" json:"last_updated"` // Unix timestamp of last update
+	Torrents         map[string][]Torrent   `bson:"torrents,omitempty" json:"torrents,omitempty"`
+	ExternalIDs      map[string]interface{} `bson:"external_ids,omitempty" json:"external_ids,omitempty"`
+	LastUpdated      string                 `bson:"last_updated,,omitempty" json:"last_updated,omitempty"` // Unix timestamp of last update
 }
 
 type OmdbMovie struct {

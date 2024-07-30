@@ -7,46 +7,46 @@ import (
 
 type AnimeMovie struct {
 	ID       primitive.ObjectID   `bson:"_id,omitempty"  json:"id,omitempty"`
-	Title    string               `json:"title"`
-	Torrents map[string][]Torrent `bson:"torrents" json:"torrents"` // Transient field for processed torrents
+	Title    string               `bson:"title" json:"title"`
+	Torrents map[string][]Torrent `bson:"torrents,omitempty" json:"torrents,omitempty"` // Transient field for processed torrents
 	Links    struct {
 		Self string `json:"self"`
-	} `json:"links"`
+	} `bson:"links,omitempty" json:"links,omitempty"`
 	Attributes    Attributes    `json:"attributes"`
-	Relationships Relationships `json:"relationships"`
-	Genres        []string      `json:"genres"`
+	Relationships Relationships `bson:"relationships,omitempty" json:"relationships,omitempty"`
+	Genres        []string      `bson:"genres" json:"genres"`
 }
 
 type AnimeShow struct {
 	ID      primitive.ObjectID `bson:"_id,omitempty"  json:"id,omitempty"`
 	Title   string             `bson:"title" json:"title"`
-	Seasons map[int]Season     `bson:"seasons" json:"seasons"` // Transient field for processed torrents
+	Seasons map[int]Season     `bson:"seasons,omitempty" json:"seasons,omitempty"` // Transient field for processed torrents
 	Links   struct {
 		Self string `json:"self"`
-	} `json:"links"`
+	} `bson:"links,omitempty" json:"links,omitempty"`
 	Attributes    Attributes           `bson:"attributes" json:"attributes"`
-	Relationships Relationships        `bson:"relationships" json:"relationships"`
+	Relationships Relationships        `bson:"relationships,omitempty" json:"relationships,omitempty"`
 	Genres        []string             `bson:"genres" json:"genres"`
-	Episodes      []EpisodeInfo        `bson:"episodes" json:"episodes"`
-	FullContent   map[string][]Torrent `bson:"fullContent" json:"fullContent"`
+	Episodes      []EpisodeInfo        `bson:"episodes,omitempty" json:"episodes,omitempty"`
+	FullContent   map[string][]Torrent `bson:"fullContent,omitempty" json:"fullContent,omitempty"`
 }
 
 type Attributes struct {
-	CreatedAt           time.Time `json:"createdAt"`
-	UpdatedAt           time.Time `json:"updatedAt"`
-	Slug                string    `json:"slug"`
-	Synopsis            string    `json:"synopsis"`
-	Description         string    `json:"description"`
-	CoverImageTopOffset int       `json:"coverImageTopOffset"`
+	CreatedAt           time.Time `bson:"created-at" json:"createdAt"`
+	UpdatedAt           time.Time `bson:"updated-at" json:"updatedAt"`
+	Slug                string    `bson:"slug" json:"slug"`
+	Synopsis            string    `bson:"synopsis" json:"synopsis"`
+	Description         string    `bson:"description" json:"description"`
+	CoverImageTopOffset int       `bson:"cover-image-top-offset" json:"coverImageTopOffset"`
 	Titles              struct {
 		En   string `json:"en"`
 		EnJp string `json:"en_jp"`
 		EnUs string `json:"en_us"`
 		JaJp string `json:"ja_jp"`
-	} `json:"titles"`
-	CanonicalTitle    string        `json:"canonicalTitle"`
-	AbbreviatedTitles []interface{} `json:"abbreviatedTitles"`
-	AverageRating     string        `json:"averageRating"`
+	} `bson:"titles" json:"titles"`
+	CanonicalTitle    string        `bson:"canonical-title" json:"canonicalTitle"`
+	AbbreviatedTitles []interface{} `bson:"abbreviated-titles,omitempty" json:"abbreviatedTitles,omitempty"`
+	AverageRating     string        `bson:"average-rating" json:"averageRating"`
 	RatingFrequencies struct {
 		Field1  string `json:"2"`
 		Field2  string `json:"3"`
@@ -67,19 +67,19 @@ type Attributes struct {
 		Field17 string `json:"18"`
 		Field18 string `json:"19"`
 		Field19 string `json:"20"`
-	} `json:"ratingFrequencies"`
-	UserCount      int         `json:"userCount"`
-	FavoritesCount int         `json:"favoritesCount"`
-	StartDate      string      `json:"startDate"`
-	EndDate        string      `json:"endDate"`
-	NextRelease    interface{} `json:"nextRelease"`
-	PopularityRank int         `json:"popularityRank"`
-	RatingRank     int         `json:"ratingRank"`
-	AgeRating      string      `json:"ageRating"`
-	AgeRatingGuide string      `json:"ageRatingGuide"`
-	Subtype        string      `json:"subtype"`
-	Status         string      `json:"status"`
-	Tba            interface{} `json:"tba"`
+	} `bson:"rating-frequencies,omitempty" json:"ratingFrequencies,omitempty"`
+	UserCount      int         `bson:"user-count,omitempty" json:"userCount,omitempty"`
+	FavoritesCount int         `bson:"favorites-count" json:"favoritesCount"`
+	StartDate      string      `bson:"start-date" json:"startDate"`
+	EndDate        string      `bson:"end-date" json:"endDate"`
+	NextRelease    interface{} `bson:"next-release" json:"nextRelease"`
+	PopularityRank int         `bson:"popularity-rank" json:"popularityRank"`
+	RatingRank     int         `bson:"rating-rank" json:"ratingRank"`
+	AgeRating      string      `bson:"age-rating" json:"ageRating"`
+	AgeRatingGuide string      `bson:"age-rating-guide" json:"ageRatingGuide"`
+	Subtype        string      `bson:"subtype" json:"subtype"`
+	Status         string      `bson:"status" json:"status"`
+	Tba            interface{} `bson:"tba" json:"tba"`
 	PosterImage    struct {
 		Tiny     string `json:"tiny"`
 		Large    string `json:"large"`
@@ -105,7 +105,7 @@ type Attributes struct {
 					Height int `json:"height"`
 				} `json:"medium"`
 			} `json:"dimensions"`
-		} `json:"meta"`
+		} `bson:"meta,omitempty" json:"meta,omitempty"`
 	} `json:"posterImage"`
 	CoverImage struct {
 		Tiny     string `json:"tiny"`
@@ -128,13 +128,13 @@ type Attributes struct {
 				} `json:"small"`
 			} `json:"dimensions"`
 		} `json:"meta"`
-	} `json:"coverImage"`
-	EpisodeCount   int    `json:"episodeCount"`
-	EpisodeLength  int    `json:"episodeLength"`
-	TotalLength    int    `json:"totalLength"`
-	YoutubeVideoId string `json:"youtubeVideoId"`
-	ShowType       string `json:"showType"`
-	Nsfw           bool   `json:"nsfw"`
+	} `bson:"cover-image" json:"coverImage"`
+	EpisodeCount   int    `bson:"episode-count" json:"episodeCount"`
+	EpisodeLength  int    `bson:"episode-length" json:"episodeLength"`
+	TotalLength    int    `bson:"total-length" json:"totalLength"`
+	YoutubeVideoId string `bson:"youtube-video-id" json:"youtubeVideoId"`
+	ShowType       string `bson:"show-type" json:"showType"`
+	Nsfw           bool   `bson:"nsfw,omitempty" json:"nsfw,omitempty"`
 }
 
 type Relationships struct {
@@ -269,10 +269,10 @@ type EpisodeResponse struct {
 }
 type EpisodeInfo struct {
 	Id    string `json:"id"`
-	Type  string `json:"type"`
+	Type  string `bson:"type,omitempty" json:"type,omitempty"`
 	Links struct {
 		Self string `json:"self"`
-	} `json:"links"`
+	} `bson:"links,omitempty" json:"links,omitempty"`
 	Attributes struct {
 		CreatedAt   time.Time `json:"createdAt"`
 		UpdatedAt   time.Time `json:"updatedAt"`
@@ -303,12 +303,12 @@ type EpisodeInfo struct {
 				Self    string `json:"self"`
 				Related string `json:"related"`
 			} `json:"links"`
-		} `json:"media"`
+		} `bson:"media,omitempty" json:"media,omitempty"`
 		Videos struct {
 			Links struct {
 				Self    string `json:"self"`
 				Related string `json:"related"`
 			} `json:"links"`
 		} `json:"videos"`
-	} `json:"relationships"`
+	} `bson:"relationships,omitempty" json:"relationships,omitempty"`
 }

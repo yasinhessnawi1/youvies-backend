@@ -40,19 +40,19 @@ func main() {
 		}
 	}()
 
-	tmdb := os.Getenv("TMDB_KEY")
+	//tmdb := os.Getenv("TMDB_KEY")
 
 	// Connect to the database
 	database.ConnectDB()
 
 	//movieScraper := scraper.NewMovieScraper(tmdb)
-	showScraper := scraper.NewShowScraper(tmdb)
+	//showScraper := scraper.NewShowScraper(tmdb)
 	animeShowScraper := scraper.NewAnimeShowScraper()
 	//animeMovieScraper := scraper.NewAnimeMovieScraper()
 
 	// Initialize bulk scraper
 	bulkScraper := scraper.NewBulkScraper([]scraper.Scraper{
-		showScraper,
+		//showScraper,
 		//movieScraper,
 		animeShowScraper,
 		//animeMovieScraper,
