@@ -25,7 +25,7 @@ func NewAnimeMovieScraper() *AnimeMovieScraper {
 // FetchAnimeMoviesFromKitsu fetches anime movie details from Kitsu with pagination
 func (s *AnimeMovieScraper) FetchAnimeMoviesFromKitsu() ([]models.AnimeResponse, error) {
 	var allAnimes []models.AnimeResponse
-	url := fmt.Sprintf("%s", s.BaseScraper.BaseURL)
+	url := fmt.Sprintf("%s?filter[subtype]=movie", s.BaseScraper.BaseURL)
 
 	for url != "" {
 		resp, err := http.Get(url)

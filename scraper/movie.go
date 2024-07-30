@@ -8,9 +8,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"time"
 	"youvies-backend/database"
@@ -213,8 +213,15 @@ func (ms *MovieScraper) FetchMovieIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
-	sort.Strings(ids)
+	ShuffleStrings(ids)
 	return ids, nil
+}
+func ShuffleStrings(arr []string) []string {
+	rand.NewSource(time.Now().UnixNano())
+	rand.Shuffle(len(arr), func(i, j int) {
+		arr[i], arr[j] = arr[j], arr[i]
+	})
+	return arr
 }
 
 // createMovieDoc constructs a movie document from TMDB and OMDB data.
