@@ -75,7 +75,7 @@ func (s *AnimeMovieScraper) Scrape() error {
 			if exists {
 				continue
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Attributes.CanonicalTitle)
+			torrents, err := utils.FetchTorrents(animeDoc.Title)
 			if err != nil {
 				log.Printf("error fetching torrents: %v", err)
 			}
@@ -106,11 +106,13 @@ func (s *AnimeMovieScraper) Scrape() error {
 
 // createAnimeMovieDoc constructs an anime movie document from Kitsu data.
 func (s *AnimeMovieScraper) createAnimeMovieDoc(anime models.Anime, genres []string) models.AnimeMovie {
-	title := anime.Attributes.CanonicalTitle
+	title := anime.Attributes.Titles.En
 	if title == "" {
 		title = anime.Attributes.Titles.EnJp
 		if title == "" {
-			title = anime.Attributes.Titles.EnJp
+			title = anime.Attributes.CanonicalTitle
+		} else {
+			title = anime.Attributes.Titles.EnUs
 		}
 	}
 	return models.AnimeMovie{

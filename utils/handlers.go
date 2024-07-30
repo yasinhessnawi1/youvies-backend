@@ -38,8 +38,11 @@ func SortTorrentsBySeeders(torrents []models.Torrent) {
 // isUnrelatedContent filters out unrelated torrents based on their name.
 func isUnrelatedContent(name string) bool {
 	unrelatedKeywords := []string{
-		"book", "guide", "soundtrack", "companion", "album", "cookbook", "unofficial",
+		"book", "guide", "soundtrack", "companion", "album", "cookbook", "unofficial", "ost", "music", "sound", "track",
+		"audiobook", "audiobooks", "novel", "manga", "comic", "artbook", "art book", "art", "lyrics", "lyric", "lyrical",
 	}
+	name = strings.Trim(name, " ")
+	name = strings.ToLower(name)
 	for _, keyword := range unrelatedKeywords {
 		if strings.Contains(strings.ToLower(name), keyword) {
 			return true
@@ -104,11 +107,12 @@ func ExtractSeasonAndEpisode(name string) (int, int, error) {
 		`ep\s(\d{1,2})`,                               // Format ep 01
 		`episode\.(\d{1,2})`,                          // Format episode.01
 		`ep\.(\d{1,2})`,                               // Format ep.01
-		`e(\d{1,2})`,                                  // Format e01
-		`(\d{1,2})`,                                   // Format 01
-		`[._](\d{1,2})[._]`,                           // Format .01., _01_
-		`(\d{1,2})\D+(\d{1,2})`,                       // Loose format 01-01 or 01x01
-		`(\d{1,2})\D*(\d{1,2})`,                       // Another loose format
+		`e(\d{1,2})`,                                  // Format e
+
+		`(\d{1,2})`,             // Format 01
+		`[._](\d{1,2})[._]`,     // Format .01., _01_
+		`(\d{1,2})\D+(\d{1,2})`, // Loose format 01-01 or 01x01
+		`(\d{1,2})\D*(\d{1,2})`, // Another loose format
 	}
 
 	for _, pattern := range patterns {
@@ -128,58 +132,6 @@ func ExtractSeasonAndEpisode(name string) (int, int, error) {
 	}
 
 	return 0, 0, fmt.Errorf("no season or episode number found in: %s", name)
-}
-
-// CategorizeAnimeTorrentsBySeasonsAndEpisodes categorizes anime torrents by seasons based on year and episodes.
-func CategorizeAnimeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent, episodeCount int) (map[int]models.Season, map[string][]models.Torrent) {
-	seasons := make(map[int]models.Season)
-	fullContent := make(map[string][]models.Torrent)
-	seasonNum := 1
-
-	for _, torrent := range torrents {
-		if isUnrelatedContent(torrent.Name) {
-			continue
-		}
-
-		// Check for full season or complete series torrents
-		if isFullSeasonTorrent(torrent.Name) {
-			fullContent[torrent.Name] = append(fullContent[torrent.Name], torrent)
-			continue
-		}
-
-		season, exists := seasons[seasonNum]
-		if !exists {
-			season = models.Season{Episodes: make(map[int]models.Episode)}
-		}
-
-		episodeNum := GetEpisodeNumberFromTorrentName(torrent.Name)
-		if episodeNum == 0 {
-			log.Printf("error parsing episode number: %s", torrent.Name)
-			continue
-		}
-
-		episode, exists := season.Episodes[episodeNum]
-		if !exists {
-			episode = models.Episode{Torrents: make(map[string][]models.Torrent)}
-		}
-
-		quality := ExtractQuality(torrent.Name)
-		episode.Torrents[quality] = append(episode.Torrents[quality], torrent)
-
-		season.Episodes[episodeNum] = episode
-		seasons[seasonNum] = season
-	}
-
-	// Sort torrents by seeders within each episode's quality category
-	for _, season := range seasons {
-		for _, episode := range season.Episodes {
-			for quality := range episode.Torrents {
-				SortTorrentsBySeeders(episode.Torrents[quality])
-			}
-		}
-	}
-
-	return seasons, fullContent
 }
 
 // isFullSeasonTorrent checks if a torrent is for a full season or complete series.
@@ -256,6 +208,9 @@ func CategorizeTorrentsBySeasonsAndEpisodes(torrents []models.Torrent) (map[int]
 	seasons := make(map[int]models.Season)
 	fullContent := make(map[string][]models.Torrent)
 	for _, torrent := range torrents {
+		if isUnrelatedContent(torrent.Name) {
+			continue
+		}
 		if isFullSeasonTorrent(torrent.Name) {
 			fullContent[torrent.Name] = append(fullContent[torrent.Name], torrent)
 			continue

@@ -33,17 +33,20 @@ func FetchAllEpisodes(animeID string) ([]models.EpisodeInfo, error) {
 	return allEpisodes, nil
 }
 
-// FetchMissingTorrents fetches missing torrents for a list of episodes
+// FetchMissingTorrentsAnime fetches missing torrents for a list of episodes
 func FetchMissingTorrentsAnime(title string, episodes []models.EpisodeInfo) ([]models.Torrent, error) {
 	var missingTorrents []models.Torrent
 
 	for _, episode := range episodes {
 		query := fmt.Sprintf("%s S%02dE%02d", title, episode.Attributes.SeasonNumber, episode.Attributes.Number)
 		torrents, err := FetchTorrents(query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch torrents for %s: %v", query, err)
+		if err != nil || len(torrents) == 0 {
+			query = fmt.Sprintf("%s %02d", title, episode.Attributes.Number)
+			torrents, err = FetchTorrents(query)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch torrents for %s: %v", query, err)
+			}
 		}
-
 		missingTorrents = append(missingTorrents, torrents...)
 	}
 	return missingTorrents, nil

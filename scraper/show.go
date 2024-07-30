@@ -39,7 +39,7 @@ func (ss *ShowScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
 	for _, id := range ids {
 		wg.Add(1)
 		semaphore <- struct{}{}
@@ -63,11 +63,9 @@ func (ss *ShowScraper) Scrape() error {
 			var existingShow models.Show
 			var existingID primitive.ObjectID
 			if exists {
-				if err := database.FindItem(bson.M{"title": showDetails.Title}, "shows", &existingShow); err != nil {
-					log.Printf("Failed to fetch existing show: %v", err)
-					return
-				}
-				existingID = existingShow.ID
+				log.Printf("Show %s already exists in database", showDetails.Title)
+				//existingID = existingShow.ID
+				return
 			}
 
 			torrents, err := utils.FetchTorrents(showDetails.Title)

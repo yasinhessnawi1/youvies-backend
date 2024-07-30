@@ -37,7 +37,6 @@ func (s *AnimeShowScraper) FetchAnimeDetailsFromKitsu() ([]models.AnimeResponse,
 		if err := json.NewDecoder(resp.Body).Decode(&animes); err != nil {
 			return nil, err
 		}
-
 		allAnimes = append(allAnimes, animes)
 		url = animes.Links.Next
 		err = resp.Body.Close()
@@ -86,12 +85,12 @@ func (s *AnimeShowScraper) Scrape() error {
 				log.Printf("Anime %s already exists in database", animeDoc.Title)
 				continue
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Attributes.CanonicalTitle)
+			torrents, err := utils.FetchTorrents(animeDoc.Title)
 			if err != nil {
 				log.Printf("error fetching torrents: %v", err)
 			}
 
-			categorizedTorrents, fullContent := utils.CategorizeAnimeTorrentsBySeasonsAndEpisodes(torrents, anime.Attributes.EpisodeCount)
+			categorizedTorrents, fullContent := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
 			animeDoc.Seasons = categorizedTorrents
 			animeDoc.FullContent = fullContent
 			missingEpisodes := s.checkForMissingEpisodes(animeDoc)
@@ -144,7 +143,7 @@ func (s *AnimeShowScraper) checkForMissingEpisodes(animeDoc models.AnimeShow) []
 	var missingEpisodes []models.EpisodeInfo
 	for _, episode := range animeDoc.Episodes {
 		episodeNum := episode.Attributes.Number
-		if _, ok := animeDoc.Seasons[1].Episodes[episodeNum]; !ok {
+		if _, ok := animeDoc.Seasons[episode.Attributes.SeasonNumber].Episodes[episodeNum]; !ok {
 			missingEpisodes = append(missingEpisodes, episode)
 		}
 	}
@@ -153,11 +152,13 @@ func (s *AnimeShowScraper) checkForMissingEpisodes(animeDoc models.AnimeShow) []
 
 // createAnimeShowDoc constructs an anime show document from Kitsu data.
 func (s *AnimeShowScraper) createAnimeShowDoc(anime models.Anime, genres []string) models.AnimeShow {
-	title := anime.Attributes.CanonicalTitle
+	title := anime.Attributes.Titles.En
 	if title == "" {
 		title = anime.Attributes.Titles.EnJp
 		if title == "" {
-			title = anime.Attributes.Titles.En
+			title = anime.Attributes.CanonicalTitle
+		} else {
+			title = anime.Attributes.Titles.EnUs
 		}
 	}
 	return models.AnimeShow{

@@ -1,32 +1,31 @@
 package api
 
 import (
-	"fmt"
+	"github.com/anacrolix/torrent"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
-
-	"github.com/anacrolix/torrent"
-	"github.com/gin-gonic/gin"
 )
 
 var (
 	client         *torrent.Client
 	clientMutex    sync.Mutex
 	currentTorrent *torrent.Torrent
+	defaultDir     = ".tmp"
 )
 
 func initClient() error {
 	clientMutex.Lock()
 	defer clientMutex.Unlock()
 	if client == nil {
-		var err error
 		clientConfig := torrent.NewDefaultClientConfig()
 		clientConfig.NoDefaultPortForwarding = true
+		clientConfig.DataDir = defaultDir
+		var err error
 		client, err = torrent.NewClient(clientConfig)
-
 		if err != nil {
 			return err
 		}
@@ -78,7 +77,7 @@ func streamHandler(c *gin.Context) {
 
 	var videoFile *torrent.File
 	for _, f := range t.Files() {
-		if strings.HasSuffix(f.Path(), ".mp4") || strings.HasSuffix(f.Path(), ".mkv") {
+		if strings.HasSuffix(f.Path(), ".mp4") || strings.HasSuffix(f.Path(), ".mkv") && !strings.Contains(f.Path(), "sample") {
 			videoFile = f
 			break
 		}
@@ -90,6 +89,7 @@ func streamHandler(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "video/mp4")
+
 	c.Stream(func(w io.Writer) bool {
 		r := videoFile.NewReader()
 		if err != nil {
@@ -113,20 +113,24 @@ func streamHandler(c *gin.Context) {
 		}
 	})
 }
-func deleteStreamCache(c *gin.Context) {
-	path := c.Query("oldPath")
-	if path == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Path is required"})
-		return
-	}
-	defer func(path string) {
-		err := os.RemoveAll(path)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to remove file %s: %v", path, err)})
-		}
-		os.Remove(".torrent.bolt.db")
+
+func flushHandler() {
+	clientMutex.Lock()
+	defer clientMutex.Unlock()
+	if currentTorrent != nil {
 		currentTorrent.Drop()
 		currentTorrent = nil
-	}(path)
-	c.JSON(http.StatusOK, gin.H{"message": "Cache deleted"})
+	}
+	cleanupClient()
+
+	err := os.RemoveAll(defaultDir)
+	if err != nil {
+		return
+	}
+
+	err = os.Remove(".torrent.bolt.db")
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+
 }
