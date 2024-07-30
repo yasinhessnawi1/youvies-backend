@@ -38,7 +38,7 @@ func (ss *ShowScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 2) // Limit the number of concurrent goroutines
 	for _, id := range ids {
 		wg.Add(1)
 		semaphore <- struct{}{}
@@ -68,7 +68,7 @@ func (ss *ShowScraper) Scrape() error {
 			}
 
 			torrents, err := utils.FetchTorrents(showDetails.Title)
-			if err != nil {
+			if err != nil || len(torrents) == 0 {
 				log.Printf("Failed to fetch torrents for %s: %v", showDetails.Title, err)
 				return
 			}

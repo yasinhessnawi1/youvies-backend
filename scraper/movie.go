@@ -55,7 +55,7 @@ func (ms *MovieScraper) Scrape() error {
 			continue
 		}
 		torrents, err := utils.FetchTorrents(movieDetails.Title)
-		if err != nil {
+		if err != nil || len(torrents) == 0 {
 			log.Printf("Failed to fetch torrents for %s: %v", movieDetails.Title, err)
 			continue
 		}

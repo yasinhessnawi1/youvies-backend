@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
-	"sort"
 	"youvies-backend/database"
 	"youvies-backend/models"
 	"youvies-backend/utils"
@@ -46,9 +45,6 @@ func (s *AnimeMovieScraper) FetchAnimeMoviesFromKitsu() ([]models.AnimeResponse,
 		}
 	}
 	fmt.Printf("found this many anime movies: %d\n", len(allAnimes))
-	sort.Slice(allAnimes, func(i, j int) bool {
-		return i > j
-	})
 	return allAnimes, nil
 }
 
@@ -76,8 +72,9 @@ func (s *AnimeMovieScraper) Scrape() error {
 				continue
 			}
 			torrents, err := utils.FetchTorrents(animeDoc.Title)
-			if err != nil {
+			if err != nil || len(torrents) == 0 {
 				log.Printf("error fetching torrents: %v", err)
+				continue
 			}
 			categorizedTorrents := utils.CategorizeTorrentsByQuality(torrents)
 			animeDoc.Torrents = categorizedTorrents
