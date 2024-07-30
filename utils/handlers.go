@@ -137,14 +137,24 @@ func ExtractSeasonAndEpisode(name string) (int, int, error) {
 // isFullSeasonTorrent checks if a torrent is for a full season or complete series.
 func isFullSeasonTorrent(name string) bool {
 	fullSeasonPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)\b(complete|full)\b`),                                    // contains "complete" or "full"
-		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\b`),                        // Season 1, S01
-		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?(complete|full)`),        // Season 1 complete, S01 full
-		regexp.MustCompile(`(?i)\b(complete|full)\s?(season\s?\d{1,2}|s\d{1,2})`),        // complete season 1, full S01
-		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?(series|complete|full)`), // Season 1 series, S01 complete, S01 full
-		regexp.MustCompile(`(?i)\b(series|complete|full)\s?(season\s?\d{1,2}|s\d{1,2})`), // series Season 1, complete S01, full S01
-		regexp.MustCompile(`(?i)\bseries\s?(complete|full)\b`),                           // series complete, series full
-		regexp.MustCompile(`(?i)\b(complete|full)\s?series\b`),                           // complete series, full series
+		regexp.MustCompile(`(?i)\b(complete|full)\b`),                                          // contains "complete" or "full"
+		regexp.MustCompile(`(?i)\b(Complete|Full)\b`),                                          // contains "complete" or "full"
+		regexp.MustCompile(`(?i)\b(Season\s?\d{1,2}|s\d{1,2})\b`),                              // Season 1, S01
+		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\b`),                              // Season 1, S01
+		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?complete\b`),                   // Season 1 complete, S01 complete
+		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?full\b`),                       // Season 1 full, S01 full
+		regexp.MustCompile(`(?i)\b(complete|full)\s?(season\s?\d{1,2}|s\d{1,2})\b`),            // complete season 1, full S01
+		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?(complete|full)`),              // Season 1 complete, S01 full
+		regexp.MustCompile(`(?i)\b(complete|full)\s?(season\s?\d{1,2}|s\d{1,2})`),              // complete season 1, full S01
+		regexp.MustCompile(`(?i)\b(season\s?\d{1,2}|s\d{1,2})\s?(series|complete|full)`),       // Season 1 series, S01 complete, S01 full
+		regexp.MustCompile(`(?i)\b(show|complete|full)\s?(season\s?\d{1,2}|s\d{1,2})`),         // series Season 1, complete S01, full S01
+		regexp.MustCompile(`(?i)\b(show|complete|full)\s?(season|series)\b`),                   // show season, complete series, full series
+		regexp.MustCompile(`(?i)\b(show|complete|full)\s?(season|series)\s?(complete|full)\b`), // show season complete, complete series full
+		regexp.MustCompile(`(?i)\b(show\s?(complete|full)\s?(season|series))\b`),               // show complete season, show full series
+		regexp.MustCompile(`(?i)\b(show\s?(complete|full)\b)`),                                 // series complete, series full
+		regexp.MustCompile(`(?i)\b(complete|full)\s?series\b`),                                 // complete series, full series
+		regexp.MustCompile(`(?i)\b(complete|full)\s?(season|series)\b`),                        // complete season, full series
+		regexp.MustCompile(`(?i)\b(season|series)\s?(complete|full)\b`),                        // season complete, series full
 
 	}
 

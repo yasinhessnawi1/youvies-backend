@@ -99,8 +99,9 @@ func (s *AnimeShowScraper) Scrape() error {
 				}
 
 				torrents, err := utils.FetchTorrents(animeDoc.Title)
-				if err != nil {
+				if err != nil || len(torrents) == 0 {
 					log.Printf("error fetching torrents: %v", err)
+					return
 				}
 
 				categorizedTorrents, fullContent := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
