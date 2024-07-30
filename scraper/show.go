@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -271,7 +270,6 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 			log.Printf("Error decoding JSON: %v\n", err)
 			continue
 		}
-
 		// Append the ID to the array
 		ids = append(ids, strconv.Itoa(show.ID))
 	}
@@ -279,7 +277,7 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("Error reading file: %v\n", err)
 	}
-	sort.Strings(ids)
+	ShuffleStrings(ids)
 	return ids, nil
 }
 

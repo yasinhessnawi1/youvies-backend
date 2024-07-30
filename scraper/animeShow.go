@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
-	"sort"
+	"sync"
 	"youvies-backend/database"
 	"youvies-backend/models"
 	"youvies-backend/utils"
@@ -25,12 +25,17 @@ func NewAnimeShowScraper() *AnimeShowScraper {
 // FetchAnimeDetailsFromKitsu fetches anime details from Kitsu with pagination
 func (s *AnimeShowScraper) FetchAnimeDetailsFromKitsu() ([]models.AnimeResponse, error) {
 	var allAnimes []models.AnimeResponse
-	url := fmt.Sprintf("%s", s.BaseScraper.BaseURL)
+	url := fmt.Sprintf("%s?page_number=1&page_size=20", s.BaseScraper.BaseURL)
 
 	for url != "" {
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("got an error while fetching url %s: %v", url, err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("got a non-200 status code while getting animes: %d", resp.StatusCode)
+			log.Printf("link was: %s", url)
+			continue
 		}
 
 		var animes models.AnimeResponse
@@ -45,95 +50,106 @@ func (s *AnimeShowScraper) FetchAnimeDetailsFromKitsu() ([]models.AnimeResponse,
 		}
 	}
 	fmt.Printf("found this many animes: %d\n", len(allAnimes))
-	sort.Slice(allAnimes, func(i, j int) bool {
-		return i > j
-	})
+
 	return allAnimes, nil
 }
 
-// Scrape fetches data from various APIs and inserts them into the database
 func (s *AnimeShowScraper) Scrape() error {
 	animes, err := s.FetchAnimeDetailsFromKitsu()
 	if err != nil {
 		return fmt.Errorf("error fetching Kitsu anime data: %v", err)
 	}
 
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
+
 	for _, animeResp := range animes {
 		for _, anime := range animeResp.Data {
-			// Fetch episodes
-			episodes, err := utils.FetchAllEpisodes(anime.Id)
-			if err != nil {
-				log.Printf("Failed to fetch episodes for anime %s: %v", anime.Attributes.CanonicalTitle, err)
-				continue
-			}
-			anime.Attributes.EpisodeCount = len(episodes)
+			wg.Add(1)
+			semaphore <- struct{}{}
 
-			genres, err := utils.FetchGenres(anime.Relationships.Genres.Links.Related)
-			if err != nil {
-				log.Printf("Failed to fetch genres for %s: %v", anime.Attributes.CanonicalTitle, err)
-				continue
-			}
+			go func(anime models.Anime) {
+				defer wg.Done()
+				defer func() { <-semaphore }()
 
-			animeDoc := s.createAnimeShowDoc(anime, genres)
-			animeDoc.Episodes = episodes
-			exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Title}, "anime_shows")
-			if err != nil {
-				log.Fatalf("Error checking if item exists: %v", err)
-			}
-
-			if exists && animeDoc.Title == "" {
-				log.Printf("Anime %s already exists in database", animeDoc.Title)
-				continue
-			}
-			torrents, err := utils.FetchTorrents(animeDoc.Title)
-			if err != nil {
-				log.Printf("error fetching torrents: %v", err)
-			}
-
-			categorizedTorrents, fullContent := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
-			animeDoc.Seasons = categorizedTorrents
-			animeDoc.FullContent = fullContent
-			missingEpisodes := s.checkForMissingEpisodes(animeDoc)
-			if len(missingEpisodes) > 0 {
-				missingTorrents, err := utils.FetchMissingTorrentsAnime(animeDoc.Title, missingEpisodes)
+				// Fetch episodes
+				episodes, err := utils.FetchAllEpisodes(anime.Id)
 				if err != nil {
-					log.Printf("error fetching missing torrents: %v", err)
+					log.Printf("Failed to fetch episodes for anime %s: %v", anime.Attributes.CanonicalTitle, err)
+					return
 				}
-				for _, torrent := range missingTorrents {
-					if torrent.Name != "" {
-						episodeNum := utils.GetEpisodeNumberFromTorrentName(torrent.Name)
-						quality := utils.ExtractQuality(torrent.Name)
-						if episode, ok := animeDoc.Seasons[1].Episodes[episodeNum]; ok {
-							episode.Torrents[quality] = append(episode.Torrents[quality], torrent)
-						} else {
-							animeDoc.Seasons[1].Episodes[episodeNum] = models.Episode{
-								Torrents: map[string][]models.Torrent{
-									quality: {torrent},
-								},
+				anime.Attributes.EpisodeCount = len(episodes)
+
+				genres, err := utils.FetchGenres(anime.Relationships.Genres.Links.Related)
+				if err != nil {
+					log.Printf("Failed to fetch genres for %s: %v", anime.Attributes.CanonicalTitle, err)
+					return
+				}
+
+				animeDoc := s.createAnimeShowDoc(anime, genres)
+				animeDoc.Episodes = episodes
+				exists, err := database.IfItemExists(map[string]interface{}{"title": animeDoc.Title}, "anime_shows")
+				if err != nil {
+					log.Fatalf("Error checking if item exists: %v", err)
+				}
+
+				if exists && animeDoc.Title == "" {
+					log.Printf("Anime %s already exists in database", animeDoc.Title)
+					return
+				}
+
+				torrents, err := utils.FetchTorrents(animeDoc.Title)
+				if err != nil {
+					log.Printf("error fetching torrents: %v", err)
+				}
+
+				categorizedTorrents, fullContent := utils.CategorizeTorrentsBySeasonsAndEpisodes(torrents)
+				animeDoc.Seasons = categorizedTorrents
+				animeDoc.FullContent = fullContent
+				missingEpisodes := s.checkForMissingEpisodes(animeDoc)
+				if len(missingEpisodes) > 0 {
+					missingTorrents, err := utils.FetchMissingTorrentsAnime(animeDoc.Title, missingEpisodes)
+					if err != nil {
+						log.Printf("error fetching missing torrents: %v", err)
+					}
+					for _, torrent := range missingTorrents {
+						if torrent.Name != "" {
+							episodeNum := utils.GetEpisodeNumberFromTorrentName(torrent.Name)
+							quality := utils.ExtractQuality(torrent.Name)
+							if episode, ok := animeDoc.Seasons[1].Episodes[episodeNum]; ok {
+								episode.Torrents[quality] = append(episode.Torrents[quality], torrent)
+							} else {
+								animeDoc.Seasons[1].Episodes[episodeNum] = models.Episode{
+									Torrents: map[string][]models.Torrent{
+										quality: {torrent},
+									},
+								}
 							}
 						}
 					}
 				}
-			}
 
-			if exists {
-				var existingAnime models.AnimeShow
-				if err := database.FindItem(map[string]interface{}{"title": animeDoc.Title}, "anime_shows", &existingAnime); err != nil {
-					log.Printf("Failed to fetch existing anime show: %v", err)
-					continue
-				}
-				if s.hasAnimeShowChanged(existingAnime, animeDoc, categorizedTorrents) {
-					if err := database.EditItem(map[string]interface{}{"title": animeDoc.Title}, animeDoc, "anime_shows"); err != nil {
-						log.Printf("Failed to update anime show %s in database: %v", animeDoc.Title, err)
+				if exists {
+					var existingAnime models.AnimeShow
+					if err := database.FindItem(map[string]interface{}{"title": animeDoc.Title}, "anime_shows", &existingAnime); err != nil {
+						log.Printf("Failed to fetch existing anime show: %v", err)
+						return
+					}
+					if s.hasAnimeShowChanged(existingAnime, animeDoc, categorizedTorrents) {
+						if err := database.EditItem(map[string]interface{}{"title": animeDoc.Title}, animeDoc, "anime_shows"); err != nil {
+							log.Printf("Failed to update anime show %s in database: %v", animeDoc.Title, err)
+						}
+					}
+				} else {
+					if err := database.InsertItem(animeDoc, animeDoc.Title, "anime_shows"); err != nil {
+						log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
 					}
 				}
-			} else {
-				if err := database.InsertItem(animeDoc, animeDoc.Title, "anime_shows"); err != nil {
-					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
-				}
-			}
+			}(anime)
 		}
 	}
+
+	wg.Wait()
 	log.Println("Fetching new anime shows completed")
 	return nil
 }

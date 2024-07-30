@@ -45,17 +45,17 @@ func main() {
 	// Connect to the database
 	database.ConnectDB()
 
-	movieScraper := scraper.NewMovieScraper(tmdb)
+	//movieScraper := scraper.NewMovieScraper(tmdb)
 	showScraper := scraper.NewShowScraper(tmdb)
 	animeShowScraper := scraper.NewAnimeShowScraper()
-	animeMovieScraper := scraper.NewAnimeMovieScraper()
+	//animeMovieScraper := scraper.NewAnimeMovieScraper()
 
 	// Initialize bulk scraper
 	bulkScraper := scraper.NewBulkScraper([]scraper.Scraper{
 		showScraper,
-		movieScraper,
+		//movieScraper,
 		animeShowScraper,
-		animeMovieScraper,
+		//animeMovieScraper,
 	})
 
 	// Run the bulk scraper
