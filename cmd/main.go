@@ -47,14 +47,14 @@ func main() {
 
 	//movieScraper := scraper.NewMovieScraper(tmdb)
 	//showScraper := scraper.NewShowScraper(tmdb)
-	animeShowScraper := scraper.NewAnimeShowScraper()
+	//animeShowScraper := scraper.NewAnimeShowScraper()
 	//animeMovieScraper := scraper.NewAnimeMovieScraper()
 
 	// Initialize bulk scraper
 	bulkScraper := scraper.NewBulkScraper([]scraper.Scraper{
 		//showScraper,
 		//movieScraper,
-		animeShowScraper,
+		//animeShowScraper,
 		//animeMovieScraper,
 	})
 

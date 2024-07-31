@@ -146,16 +146,16 @@ type Relationships struct {
 	} `json:"genres"`
 	Categories struct {
 		Links struct {
-			Self    string `json:"self"`
-			Related string `json:"related"`
-		} `json:"categories"`
-	} `json:"categories"`
+			Self    string `json:"self,omitempty"`
+			Related string `json:"related,omitempty"`
+		} `json:"categories,omitempty"`
+	} `json:"categories,omitempty"`
 	Castings struct {
 		Links struct {
-			Self    string `json:"self"`
-			Related string `json:"related"`
-		} `json:"castings"`
-	} `json:"castings"`
+			Self    string `json:"self,omitempty"`
+			Related string `json:"related,omitempty"`
+		} `json:"castings,omitempty"`
+	} `json:"castings,omitempty"`
 	Installments struct {
 		Links struct {
 			Self    string `json:"self"`
@@ -237,14 +237,14 @@ type Relationships struct {
 }
 
 type AnimeResponse struct {
-	Data []Anime `json:"data"`
+	Data []Anime `json:"data,omitempty"`
 	Meta struct {
-		Count int `json:"count"`
-	} `json:"meta"`
+		Count int `json:"count,omitempty"`
+	} `json:"meta,omitempty"`
 	Links struct {
-		First string `json:"first"`
+		First string `json:"first,omitempty"`
 		Next  string `json:"next"`
-		Last  string `json:"last"`
+		Last  string `json:"last,omitempty"`
 	} `json:"links"`
 }
 type Anime struct {

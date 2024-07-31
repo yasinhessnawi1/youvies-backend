@@ -71,7 +71,7 @@ func (s *AnimeMovieScraper) Scrape() error {
 			if exists {
 				continue
 			}
-			torrents, err := utils.FetchTorrents(animeDoc.Title)
+			torrents, err := utils.FetchTorrents(animeDoc.Title, "anime movie")
 			if err != nil || len(torrents) == 0 {
 				log.Printf("error fetching torrents: %v", err)
 				continue

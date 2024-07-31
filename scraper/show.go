@@ -67,7 +67,7 @@ func (ss *ShowScraper) Scrape() error {
 				return
 			}
 
-			torrents, err := utils.FetchTorrents(showDetails.Title)
+			torrents, err := utils.FetchTorrents(showDetails.Title, "show")
 			if err != nil || len(torrents) == 0 {
 				log.Printf("Failed to fetch torrents for %s: %v", showDetails.Title, err)
 				return

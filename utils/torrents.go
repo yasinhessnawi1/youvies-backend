@@ -10,7 +10,7 @@ import (
 	"youvies-backend/models"
 )
 
-func FetchTorrents(title string) ([]models.Torrent, error) {
+func FetchTorrents(title, itemType string) ([]models.Torrent, error) {
 	var torrents []models.Torrent
 
 	url := fmt.Sprintf("%ssearch?query=%s", TorrentAPIBaseURL, strings.ReplaceAll(title, " ", "%20"))
@@ -73,8 +73,22 @@ func FetchTorrents(title string) ([]models.Torrent, error) {
 	for _, torrent := range result.Data {
 		category := strings.ToLower(torrent.Category)
 
-		if containsAny(category, movieCategories) || containsAny(category, showCategories) || containsAny(category, animeCategories) {
-			if torrent.Magnet != "" || torrent.Hash != "" {
+		switch itemType {
+		case "movie", " anime movie":
+			if containsAny(category, movieCategories) || containsAny(category, animeCategories) {
+				torrents = append(torrents, torrent)
+			}
+			break
+		case "show":
+			if containsAny(category, showCategories) || containsAny(category, animeCategories) {
+				torrents = append(torrents, torrent)
+			}
+			break
+		case "anime show", "anime movie":
+			torrents = append(torrents, torrent)
+			break
+		default:
+			if containsAny(category, animeCategories) || containsAny(category, showCategories) || containsAny(category, movieCategories) {
 				torrents = append(torrents, torrent)
 			}
 		}

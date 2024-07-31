@@ -201,7 +201,7 @@ func FetchMissingTorrents(title string, existingTorrents []models.Torrent, seaso
 	for seasonNum, episodes := range missingEpisodes {
 		for _, episodeNum := range episodes {
 			query := fmt.Sprintf("%s S%02dE%02d", title, seasonNum, episodeNum)
-			torrents, err := FetchTorrents(query)
+			torrents, err := FetchTorrents(query, "show")
 			if err != nil {
 				log.Printf("Failed to fetch torrents for %s: %v", query, err)
 				continue
