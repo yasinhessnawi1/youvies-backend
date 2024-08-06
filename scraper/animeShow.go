@@ -22,7 +22,7 @@ func NewAnimeShowScraper() *AnimeShowScraper {
 func (s *AnimeShowScraper) Scrape(animeList []models.Anime) error {
 	log.Printf("Scraping %d anime shows", len(animeList))
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 3) // Limit the number of concurrent goroutines
 
 	for _, anime := range animeList {
 		if strings.Contains(anime.Attributes.Slug, "delete") {
