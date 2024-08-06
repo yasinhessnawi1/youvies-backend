@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: youvies-backend
     ports:
       - "127.0.0.1:5000:5000"
     environment:
@@ -12,11 +13,7 @@ services:
       - OMDB_KEY=${OMDB_KEY}
       - TMDB_KEY=${TMDB_KEY}
       - TVDB_KEY=${TVDB_KEY}
-      - MONGO_DATABASE=${MONGO_DATABASE}
-      - MONGO_URI=${MONGO_URI}
-      - MONGO_PORT=${MONGO_PORT}
-      - MONGO_USER=${MONGO_USER}
-      - MONGO_PASS=${MONGO_PASS}
+      - POSTGRES_URI=${POSTGRES_URI}
       - CRON_TIME=${CRON_TIME}
       - TEMP_DIR=${TEMP_DIR}
     dns:
@@ -27,11 +24,27 @@ services:
       - go_mod_cache:/go/pkg/mod
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    container_name: youvies-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
 
 volumes:
+  postgres_data:
   go_mod_cache:

@@ -14,11 +14,13 @@ func NewBulkScraper(scrapers []Scraper) *BulkScraper {
 }
 
 func (b *BulkScraper) ScrapeAll() error {
+	log.Println("Starting bulk scraping...")
 	var wg sync.WaitGroup
 	var errors []error
 	mu := sync.Mutex{}
 
 	for _, scraper := range b.scrapers {
+
 		wg.Add(1)
 		go func(scr Scraper) {
 			defer wg.Done()

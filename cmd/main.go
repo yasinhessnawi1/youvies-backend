@@ -6,9 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 	"youvies-backend/api"
 	"youvies-backend/database"
 	"youvies-backend/scraper"
+	"youvies-backend/utils"
 )
 
 func main() {
@@ -40,27 +42,59 @@ func main() {
 		}
 	}()
 
-	//tmdb := os.Getenv("TMDB_KEY")
+	tmdb := os.Getenv("TMDB_KEY")
 
 	// Connect to the database
 	database.ConnectDB()
-
-	//movieScraper := scraper.NewMovieScraper(tmdb)
-	//showScraper := scraper.NewShowScraper(tmdb)
-	//animeShowScraper := scraper.NewAnimeShowScraper()
-	//animeMovieScraper := scraper.NewAnimeMovieScraper()
+	movieScraper := scraper.NewMovieScraper(tmdb)
+	showScraper := scraper.NewShowScraper(tmdb)
+	animeShowScraper := scraper.NewAnimeShowScraper()
+	animeMovieScraper := scraper.NewAnimeMovieScraper()
 
 	// Initialize bulk scraper
 	bulkScraper := scraper.NewBulkScraper([]scraper.Scraper{
-		//showScraper,
-		//movieScraper,
-		//animeShowScraper,
-		//animeMovieScraper,
+		showScraper,
+		movieScraper,
 	})
+	// Run the bulk scraper every 24 hours
+	ticker := time.NewTicker(24 * time.Hour)
+	go func() {
+		for range ticker.C {
+			// Fetch and sort anime by updated_at once a day
+			animeList, err := utils.FetchSortedAnimeByUpdatedAt(utils.KitsuBaseURL)
+			if err != nil {
+				log.Printf("Error fetching sorted anime: %v", err)
+				continue
+			}
 
-	// Run the bulk scraper
+			// Pass the sorted anime list to the scrapers
+			if err := animeShowScraper.Scrape(animeList); err != nil {
+				log.Printf("Error scraping anime shows: %v", err)
+			}
+			if err := animeMovieScraper.Scrape(animeList); err != nil {
+				log.Printf("Error scraping anime movies: %v", err)
+			}
+
+			// Run the bulk scraper for movies and shows
+			if err := bulkScraper.ScrapeAll(); err != nil {
+				log.Printf("Error scraping data: %v", err)
+			}
+		}
+	}()
+
 	if err := bulkScraper.ScrapeAll(); err != nil {
 		log.Printf("Error scraping data: %v", err)
+	}
+	// Initial scrape
+	animeList, err := utils.FetchSortedAnimeByUpdatedAt(utils.KitsuBaseURL)
+	if err != nil {
+		log.Printf("Error fetching sorted anime: %v", err)
+	}
+	if err := animeShowScraper.Scrape(animeList); err != nil {
+		log.Printf("Error scraping anime shows: %v", err)
+	}
+	if err := animeMovieScraper.Scrape(animeList); err != nil {
+		log.Printf("Error scraping anime movies: %v", err)
 	}
 
 	// Block forever to keep the program running

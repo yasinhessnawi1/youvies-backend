@@ -8,8 +8,6 @@ import (
 	"youvies-backend/utils"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -34,10 +32,10 @@ func RegisterUser(c *gin.Context) {
 	user.Password = string(hashedPassword)
 	user.Created = time.Now()
 	user.Updated = time.Now()
-	user.ID = primitive.NewObjectID()
+	user.ID = utils.GenerateUUID()
 	user.Role = "user"
 
-	if err := database.InsertItem(user, user.Username, "users"); err != nil {
+	if err := database.InsertItem(&user, "users"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting user"})
 		return
 	}
@@ -47,14 +45,19 @@ func RegisterUser(c *gin.Context) {
 
 // LoginUser handles the user login process.
 func LoginUser(c *gin.Context) {
-	var creds models.User
+	var creds *models.User
 	if err := c.BindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
-	if err := database.FindItem(bson.M{"username": creds.Username}, "users", &user); err != nil {
+	id, err := database.FindUser(creds.Username, "users")
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	if err := database.FindItem(id, "users", &user); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
@@ -89,7 +92,7 @@ func LoginUser(c *gin.Context) {
 
 // EditUser handles updating user details.
 func EditUser(c *gin.Context) {
-	userID := c.GetString("user")
+	//userID := c.GetString("user")
 
 	var userUpdate models.User
 	if err := c.BindJSON(&userUpdate); err != nil {
@@ -107,10 +110,9 @@ func EditUser(c *gin.Context) {
 		userUpdate.Password = string(hashedPassword)
 	}
 
-	filter := bson.M{"username": userID}
-	update := bson.M{"$set": userUpdate}
+	update := map[string]interface{}{"$set": userUpdate}
 
-	if err := database.EditItem(filter, update, "users"); err != nil {
+	if err := database.EditItem(update, "users"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
 		return
 	}
