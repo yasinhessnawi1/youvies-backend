@@ -111,91 +111,69 @@ func FetchAllEpisodes(animeID string) ([]models.Episode, error) {
 
 // FetchSortedAnimeByUpdatedAt fetches anime by updated_at timestamp using concurrent URL fetching without total items
 func FetchSortedAnimeByUpdatedAt(baseURL string) ([]models.Anime, error) {
-	const (
-		workerCount = 10 // Adjust based on your server and network capabilities
-		pageLimit   = 20 // Number of items per page
-	)
 	var allAnime []models.Anime
 	var wg sync.WaitGroup
-	urls := make(chan int)
-	results := make(chan []models.Anime, workerCount)
-	errors := make(chan error, workerCount)
+	semaphore := make(chan struct{}, 10) // Limit the number of concurrent goroutines
 
-	// Worker function
-	worker := func() {
-		defer wg.Done()
-		for offset := range urls {
-			url := fmt.Sprintf("%s?sort=updated_at&page[limit]=%d&page[offset]=%d", baseURL, pageLimit, offset)
+	offset := 1
+	for {
+		wg.Add(1)
+		semaphore <- struct{}{}
+		url := fmt.Sprintf("%s?filter[subtype]=TV,movie,OVA,ONA&page[limit]=20&page[offset]=%d", baseURL, offset*20)
+
+		go func(url string) {
+			defer wg.Done()
+			defer func() { <-semaphore }()
+
 			resp, err := http.Get(url)
 			if err != nil {
-				errors <- fmt.Errorf("error fetching URL %s: %v", url, err)
-				continue
+				log.Printf("got an error while fetching url %s: %v", url, err)
+				return
+			}
+			if resp.StatusCode != http.StatusOK {
+				log.Printf("got a non-200 status code while getting animes: %d", resp.StatusCode)
+				log.Printf("link was: %s", url)
+				return
 			}
 
 			var animeResponse models.AnimeResponse
 			if err := json.NewDecoder(resp.Body).Decode(&animeResponse); err != nil {
-				errors <- fmt.Errorf("error decoding response body: %v", err)
-				resp.Body.Close()
-				continue
+				log.Printf("error decoding response body: %v", err)
+				return
 			}
 			resp.Body.Close()
 
-			// If no data is returned, stop further processing for this worker
+			// If no data is returned, stop further processing
 			if len(animeResponse.Data) == 0 {
 				return
 			}
+			allAnime = append(allAnime, animeResponse.Data...)
+		}(url)
 
-			var filteredAnime []models.Anime
-			for _, anime := range animeResponse.Data {
-				if anime.Attributes.Subtype == "movie" || anime.Attributes.Subtype == "TV" ||
-					anime.Attributes.Subtype == "ONA" || anime.Attributes.Subtype == "OVA" {
-					filteredAnime = append(filteredAnime, anime)
-				}
-			}
-
-			results <- filteredAnime
-
-			// Generate the next offset for this worker
-			urls <- offset + pageLimit
-		}
-	}
-
-	// Start workers
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go worker()
-	}
-
-	// Send the initial offset to start the process
-	go func() {
-		urls <- 1 // Start with the first offset
-	}()
-
-	// Close the results and errors channels once all workers are done
-	go func() {
-		wg.Wait()
-		close(results)
-		close(errors)
-	}()
-
-	// Collect results and handle errors concurrently
-	go func() {
-		for result := range results {
-			allAnime = append(allAnime, result...)
-			if len(allAnime)%10 == 0 {
-				fmt.Printf("%d=>", len(allAnime))
-			}
-		}
-	}()
-
-	for err := range errors {
+		// Check if there's a next page
+		resp, err := http.Get(url)
 		if err != nil {
-			return nil, err
+			log.Printf("got an error while fetching url %s: %v", url, err)
+			break
+		}
+		var animes models.AnimeResponse
+		if err := json.NewDecoder(resp.Body).Decode(&animes); err != nil {
+			log.Printf("error decoding response body: %v", err)
+			break
+		}
+		if animes.Links.Next == "" {
+			break
+		}
+		offset++
+		if len(allAnime)%200 == 0 {
+			fmt.Print(len(allAnime), "=>")
 		}
 	}
 
-	fmt.Printf("Fetched %d anime by updated_at\n", len(allAnime))
+	wg.Wait()
+	fmt.Printf("found this many animes: %d\n", len(allAnime))
 	return allAnime, nil
+
 }
 
 func RemoveDuplicateStrings(input []string) []string {

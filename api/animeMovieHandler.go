@@ -13,8 +13,8 @@ import (
 func GetAnimeMovies(c *gin.Context) {
 	version := c.Query("type")
 	collection := "anime_movies"
-	if version == "tiny" {
-		collection = "tiny_anime_movies"
+	if version == "sorted" {
+		collection = "sorted_anime_movies"
 	}
 
 	// Read pagination parameters from URL query
@@ -63,8 +63,8 @@ func GetAnimeMovieByID(c *gin.Context) {
 func GetAnimeMoviesByGenre(c *gin.Context) {
 	version := c.Query("type")
 	collection := "anime_movies"
-	if version == "tiny" {
-		collection = "tiny_anime_movies"
+	if version == "sorted" {
+		collection = "sorted_anime_movies"
 	}
 	genre := c.Param("genre")
 
@@ -97,8 +97,8 @@ func GetAnimeMoviesByGenre(c *gin.Context) {
 func SearchAnimeMovies(c *gin.Context) {
 	version := c.Query("type")
 	collection := "anime_movies"
-	if version == "tiny" {
-		collection = "tiny_anime_movies"
+	if version == "sorted" {
+		collection = "sorted_anime_movies"
 	}
 	title := c.Query("title")
 
