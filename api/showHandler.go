@@ -14,7 +14,7 @@ func GetShows(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
 	if version == "sorted" {
-		collection = "sorted_show"
+		collection = "sorted_shows"
 	}
 
 	// Read pagination parameters from URL query
@@ -64,7 +64,7 @@ func GetShowsByGenre(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
 	if version == "sorted" {
-		collection = "sorted_show"
+		collection = "sorted_shows"
 	}
 	genre := c.Param("genre")
 
@@ -98,7 +98,7 @@ func SearchShows(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
 	if version == "sorted" {
-		collection = "sorted_show"
+		collection = "sorted_shows"
 	}
 	title := c.Query("title")
 
