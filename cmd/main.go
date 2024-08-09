@@ -54,8 +54,8 @@ func main() {
 		movieScraper,
 	})
 
-	// Run the bulk scraper every 24 hours
-	ticker := time.NewTicker(24 * time.Hour)
+	// Run the bulk scraper every 12 hours
+	ticker := time.NewTicker(12 * time.Hour)
 	go func() {
 		for range ticker.C {
 			// Fetch and sort anime by updated_at once a day
@@ -79,25 +79,30 @@ func main() {
 			}
 		}
 	}()
+	/*
+		go func() {
+			// Initial scrape
+			if err := bulkScraper.ScrapeAll(); err != nil {
+				log.Printf("Error scraping data: %v", err)
+			}
+		}()
+		// Initial scrape
+		animeList, err := utils.FetchSortedAnimeByUpdatedAt(utils.KitsuBaseURL)
+		if err != nil {
+			log.Printf("Error fetching sorted anime: %v", err)
+		}
+		go func() {
+			if err := animeShowScraper.Scrape(animeList); err != nil {
+				log.Printf("Error scraping anime shows: %v", err)
+			}
+		}()
+		go func() {
+			if err := animeMovieScraper.Scrape(animeList); err != nil {
+				log.Printf("Error scraping anime movies: %v", err)
+			}
+		}()
 
-	if err := bulkScraper.ScrapeAll(); err != nil {
-		log.Printf("Error scraping data: %v", err)
-	}
-	// Initial scrape
-	animeList, err := utils.FetchSortedAnimeByUpdatedAt(utils.KitsuBaseURL)
-	if err != nil {
-		log.Printf("Error fetching sorted anime: %v", err)
-	}
-	go func() {
-		if err := animeShowScraper.Scrape(animeList); err != nil {
-			log.Printf("Error scraping anime shows: %v", err)
-		}
-	}()
-	go func() {
-		if err := animeMovieScraper.Scrape(animeList); err != nil {
-			log.Printf("Error scraping anime movies: %v", err)
-		}
-	}()
+	*/
 
 	// Block forever to keep the program running
 	select {}
