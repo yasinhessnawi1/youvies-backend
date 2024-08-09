@@ -25,40 +25,128 @@ func NewShowScraper(tmdbKey string) *ShowScraper {
 
 func (ss *ShowScraper) FetchChangedShowIDs() ([]string, error) {
 	log.Println("Fetching changed show IDs")
+
 	url := fmt.Sprintf("%s/tv/changes?api_key=%s", utils.TMDBBaseURL, ss.tmdbAPIKey)
-	var response struct {
+	var firstResponse struct {
 		Results []struct {
 			ID int `json:"id"`
 		} `json:"results"`
+		TotalPages int `json:"total_pages"`
 	}
-	if err := ss.FetchJSON(url, &response); err != nil {
+
+	// Fetch the first page to determine the total number of pages
+	if err := ss.FetchJSON(url+"&page=1", &firstResponse); err != nil {
 		return nil, err
 	}
-	var ids []string
-	for _, result := range response.Results {
-		ids = append(ids, strconv.Itoa(result.ID))
+
+	// Create a slice to hold all the show IDs
+	var allIDs []string
+	var mu sync.Mutex
+
+	// Append the first page results
+	for _, result := range firstResponse.Results {
+		allIDs = append(allIDs, strconv.Itoa(result.ID))
 	}
-	log.Printf("%v Changed show IDs fetched", len(ids))
-	return ids, nil
+
+	// Define a worker function to fetch and process a specific page
+	fetchPage := func(page int) {
+		pageURL := fmt.Sprintf("%s&page=%d", url, page)
+		var response struct {
+			Results []struct {
+				ID int `json:"id"`
+			} `json:"results"`
+		}
+		if err := ss.FetchJSON(pageURL, &response); err != nil {
+			log.Printf("Error fetching page %d: %v", page, err)
+			return
+		}
+		mu.Lock()
+		for _, result := range response.Results {
+			allIDs = append(allIDs, strconv.Itoa(result.ID))
+		}
+		mu.Unlock()
+	}
+
+	// Use a WaitGroup to manage concurrency
+	var wg sync.WaitGroup
+
+	// Start workers to fetch remaining pages concurrently
+	for page := 2; page <= firstResponse.TotalPages; page++ {
+		wg.Add(1)
+		go func(page int) {
+			defer wg.Done()
+			fetchPage(page)
+		}(page)
+	}
+
+	// Wait for all workers to finish
+	wg.Wait()
+
+	log.Printf("%v Changed show IDs fetched", len(allIDs))
+	return allIDs, nil
 }
 
 func (ss *ShowScraper) FetchAiringTodayShowIDs() ([]string, error) {
 	log.Println("Fetching airing today show IDs")
+
 	url := fmt.Sprintf("%s/tv/airing_today?api_key=%s", utils.TMDBBaseURL, ss.tmdbAPIKey)
-	var response struct {
+	var firstResponse struct {
 		Results []struct {
 			ID int `json:"id"`
 		} `json:"results"`
+		TotalPages int `json:"total_pages"`
 	}
-	if err := ss.FetchJSON(url, &response); err != nil {
+
+	// Fetch the first page to determine the total number of pages
+	if err := ss.FetchJSON(url+"&page=1", &firstResponse); err != nil {
 		return nil, err
 	}
-	var ids []string
-	for _, result := range response.Results {
-		ids = append(ids, strconv.Itoa(result.ID))
+
+	// Create a slice to hold all the show IDs
+	var allIDs []string
+	var mu sync.Mutex
+
+	// Append the first page results
+	for _, result := range firstResponse.Results {
+		allIDs = append(allIDs, strconv.Itoa(result.ID))
 	}
-	log.Printf("%v Airing show IDs fetched", len(ids))
-	return ids, nil
+
+	// Define a worker function to fetch and process a specific page
+	fetchPage := func(page int) {
+		pageURL := fmt.Sprintf("%s&page=%d", url, page)
+		var response struct {
+			Results []struct {
+				ID int `json:"id"`
+			} `json:"results"`
+		}
+		if err := ss.FetchJSON(pageURL, &response); err != nil {
+			log.Printf("Error fetching page %d: %v", page, err)
+			return
+		}
+		mu.Lock()
+		for _, result := range response.Results {
+			allIDs = append(allIDs, strconv.Itoa(result.ID))
+		}
+		mu.Unlock()
+	}
+
+	// Use a WaitGroup to manage concurrency
+	var wg sync.WaitGroup
+
+	// Start workers to fetch remaining pages concurrently
+	for page := 2; page <= firstResponse.TotalPages; page++ {
+		wg.Add(1)
+		go func(page int) {
+			defer wg.Done()
+			fetchPage(page)
+		}(page)
+	}
+
+	// Wait for all workers to finish
+	wg.Wait()
+
+	log.Printf("%v Airing today show IDs fetched", len(allIDs))
+	return allIDs, nil
 }
 
 // Scrape orchestrates the fetching of show data from multiple sources.

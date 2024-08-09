@@ -79,10 +79,12 @@ func main() {
 			}
 		}
 	}()
-
-	if err := bulkScraper.ScrapeAll(); err != nil {
-		log.Printf("Error scraping data: %v", err)
-	}
+	go func() {
+		// Initial scrape
+		if err := bulkScraper.ScrapeAll(); err != nil {
+			log.Printf("Error scraping data: %v", err)
+		}
+	}()
 	// Initial scrape
 	animeList, err := utils.FetchSortedAnimeByUpdatedAt(utils.KitsuBaseURL)
 	if err != nil {

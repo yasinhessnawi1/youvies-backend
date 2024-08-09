@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"youvies-backend/models"
 )
 
@@ -57,7 +58,7 @@ func FetchJSON(url, apiKey string, target interface{}) error {
 		resp, err = FetchURL(url)
 	}
 	if err != nil {
-		log.Printf("Error fetching URL: %v\n", err)
+		log.Printf("Error fetching URL: %v %v\n", err, url)
 		return nil
 	}
 	defer resp.Body.Close()
@@ -108,38 +109,92 @@ func FetchAllEpisodes(animeID string) ([]models.Episode, error) {
 	return allEpisodes, nil
 }
 
-// FetchSortedAnimeByUpdatedAt fetches and sorts anime by updated_at timestamp
+// FetchSortedAnimeByUpdatedAt fetches anime by updated_at timestamp using concurrent URL fetching without total items
 func FetchSortedAnimeByUpdatedAt(baseURL string) ([]models.Anime, error) {
+	const (
+		workerCount = 10 // Adjust based on your server and network capabilities
+		pageLimit   = 20 // Number of items per page
+	)
 	var allAnime []models.Anime
-	url := fmt.Sprintf("%s?sort=updated_at", baseURL)
+	var wg sync.WaitGroup
+	urls := make(chan int)
+	results := make(chan []models.Anime, workerCount)
+	errors := make(chan error, workerCount)
 
-	for url != "" {
-		resp, err := http.Get(url)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching URL %s: %v", url, err)
-		}
-
-		var animeResponse models.AnimeResponse
-		if err := json.NewDecoder(resp.Body).Decode(&animeResponse); err != nil {
-			return nil, fmt.Errorf("error decoding response body: %v", err)
-		}
-		for _, anime := range animeResponse.Data {
-			if anime.Attributes.Subtype == "movie" || anime.Attributes.Subtype == "TV" ||
-				anime.Attributes.Subtype == "ONA" || anime.Attributes.Subtype == "OVA" {
-				allAnime = append(allAnime, anime)
+	// Worker function
+	worker := func() {
+		defer wg.Done()
+		for offset := range urls {
+			url := fmt.Sprintf("%s?sort=updated_at&page[limit]=%d&page[offset]=%d", baseURL, pageLimit, offset)
+			resp, err := http.Get(url)
+			if err != nil {
+				errors <- fmt.Errorf("error fetching URL %s: %v", url, err)
+				continue
 			}
-		}
 
-		url = animeResponse.Links.Next
-		err = resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("error closing response body: %v", err)
-		}
-		if len(allAnime)%100 == 0 {
-			fmt.Print(len(allAnime), "=>")
+			var animeResponse models.AnimeResponse
+			if err := json.NewDecoder(resp.Body).Decode(&animeResponse); err != nil {
+				errors <- fmt.Errorf("error decoding response body: %v", err)
+				resp.Body.Close()
+				continue
+			}
+			resp.Body.Close()
+
+			// If no data is returned, stop further processing for this worker
+			if len(animeResponse.Data) == 0 {
+				return
+			}
+
+			var filteredAnime []models.Anime
+			for _, anime := range animeResponse.Data {
+				if anime.Attributes.Subtype == "movie" || anime.Attributes.Subtype == "TV" ||
+					anime.Attributes.Subtype == "ONA" || anime.Attributes.Subtype == "OVA" {
+					filteredAnime = append(filteredAnime, anime)
+				}
+			}
+
+			results <- filteredAnime
+
+			// Generate the next offset for this worker
+			urls <- offset + pageLimit
 		}
 	}
-	fmt.Printf("Fetched and sorted %d anime by updated_at\n", len(allAnime))
+
+	// Start workers
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go worker()
+	}
+
+	// Send the initial offset to start the process
+	go func() {
+		urls <- 1 // Start with the first offset
+	}()
+
+	// Close the results and errors channels once all workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+		close(errors)
+	}()
+
+	// Collect results and handle errors concurrently
+	go func() {
+		for result := range results {
+			allAnime = append(allAnime, result...)
+			if len(allAnime)%10 == 0 {
+				fmt.Printf("%d=>", len(allAnime))
+			}
+		}
+	}()
+
+	for err := range errors {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fmt.Printf("Fetched %d anime by updated_at\n", len(allAnime))
 	return allAnime, nil
 }
 
