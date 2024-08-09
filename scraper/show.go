@@ -78,7 +78,7 @@ func (ss *ShowScraper) Scrape() error {
 	ids = utils.RemoveDuplicateStrings(ids) // Remove duplicates
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 3) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
 
 	for _, id := range ids {
 		wg.Add(1)
@@ -238,7 +238,6 @@ func (ss *ShowScraper) FetchShowIDsFromTMDB() ([]string, error) {
 	return ids, nil
 }
 
-
 // Scrape orchestrates the fetching of show data from multiple sources.
 func (ss *ShowScraper) Scrape() error {
 	ids, err := ss.FetchShowIDsFromTMDB()
@@ -247,7 +246,7 @@ func (ss *ShowScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 20) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
 
 	for _, id := range ids {
 		wg.Add(1)

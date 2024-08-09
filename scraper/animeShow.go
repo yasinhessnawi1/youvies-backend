@@ -22,10 +22,10 @@ func NewAnimeShowScraper() *AnimeShowScraper {
 func (s *AnimeShowScraper) Scrape(animeList []models.Anime) error {
 	log.Printf("Scraping %d anime shows", len(animeList))
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 3) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
 
 	for _, anime := range animeList {
-		if strings.Contains(anime.Attributes.Slug, "delete") {
+		if strings.Contains(anime.Attributes.Slug, "delete") || anime.Attributes.Subtype == "movie" {
 			continue
 		}
 		wg.Add(1)
@@ -40,6 +40,37 @@ func (s *AnimeShowScraper) Scrape(animeList []models.Anime) error {
 				return
 			}
 			// Fetch the last updated timestamp from your database
+			if !exists {
+				// Fetch episodes
+				episodes, err := utils.FetchAllEpisodes(anime.ID)
+				if err != nil {
+					log.Printf("Failed to fetch episodes for anime %s: %v", anime.Attributes.CanonicalTitle, err)
+					return
+				}
+				if len(episodes) > anime.Attributes.EpisodeCount {
+					anime.Attributes.EpisodeCount = len(episodes)
+				}
+
+				genres, err := utils.FetchGenres(anime.Relationships.Genres.Links.Related)
+				if err != nil {
+					log.Printf("Failed to fetch genres for %s: %v", anime.Attributes.CanonicalTitle, err)
+					return
+				}
+
+				animeDoc := s.createAnimeShowDoc(anime, genres)
+
+				if err := database.InsertItem(animeDoc, "anime_shows"); err != nil {
+					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
+					return
+				}
+
+				for _, episode := range episodes {
+					if _, err := database.InsertEpisode(episode); err != nil {
+						log.Printf("Failed to insert episode %d for anime show %s: %v", episode.Number, animeDoc.Title, err)
+					}
+				}
+				return
+			}
 			existingAnime := models.AnimeShow{}
 			if err := database.FindItem(anime.ID, "anime_shows", &existingAnime); err != nil {
 				log.Printf("Failed to fetch existing anime show: %v", err)
@@ -111,7 +142,7 @@ func (s *AnimeShowScraper) createAnimeShowDoc(anime models.Anime, genres []model
 func (s *AnimeShowScraper) FetchAnimeDetailsFromKitsu() ([]models.AnimeResponse, error) {
 	var allAnime []models.AnimeResponse
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
 
 	pageNum := 1
 	for {

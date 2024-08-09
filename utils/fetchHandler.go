@@ -123,15 +123,20 @@ func FetchSortedAnimeByUpdatedAt(baseURL string) ([]models.Anime, error) {
 		if err := json.NewDecoder(resp.Body).Decode(&animeResponse); err != nil {
 			return nil, fmt.Errorf("error decoding response body: %v", err)
 		}
+		for _, anime := range animeResponse.Data {
+			if anime.Attributes.Subtype == "movie" || anime.Attributes.Subtype == "TV" ||
+				anime.Attributes.Subtype == "ONA" || anime.Attributes.Subtype == "OVA" {
+				allAnime = append(allAnime, anime)
+			}
+		}
 
-		allAnime = append(allAnime, animeResponse.Data...)
 		url = animeResponse.Links.Next
 		err = resp.Body.Close()
 		if err != nil {
 			return nil, fmt.Errorf("error closing response body: %v", err)
 		}
-		if len(allAnime)%20 == 0 {
-			fmt.Println(len(allAnime))
+		if len(allAnime)%100 == 0 {
+			fmt.Print(len(allAnime), "=>")
 		}
 	}
 	fmt.Printf("Fetched and sorted %d anime by updated_at\n", len(allAnime))

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"youvies-backend/models"
 
 	"github.com/lib/pq"
@@ -309,6 +310,9 @@ func deleteItem(item interface{}, name string) error {
 }
 
 func IfItemExists(id string, tableName string) (bool, error) {
+	var mu sync.Mutex
+	mu.Lock()
+	defer mu.Unlock()
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id = $1", tableName)
 	var count int
 	err := DB.QueryRow(query, id).Scan(&count)
@@ -384,6 +388,7 @@ func FindUser(itemName, tableName string) (string, error) {
 }
 
 func FindMany(tableName string, results interface{}, limit, offset int) error {
+
 	query := fmt.Sprintf("SELECT * FROM %s LIMIT %d OFFSET %d", tableName, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/lib/pq"
+	"sort"
 	"youvies-backend/models"
 )
 
@@ -406,6 +407,7 @@ func getEpisodesByAnimeShowID(animeShowID string) ([]models.Episode, error) {
 func scanRows(rows *sql.Rows, results interface{}) error {
 	switch v := results.(type) {
 	case *[]models.Movie:
+		var movies []models.Movie
 		for rows.Next() {
 			var movie models.Movie
 			var genres []byte
@@ -414,9 +416,16 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 				return fmt.Errorf("error scanning row: %v", err)
 			}
 			unmarshalJSON(genres, &movie.Genres)
-			*v = append(*v, movie)
+			movies = append(movies, movie)
 		}
+		// Sort movies by ReleaseDate in descending order
+		sort.SliceStable(movies, func(i, j int) bool {
+			return movies[i].ReleaseDate > movies[j].ReleaseDate
+		})
+		*v = movies
+
 	case *[]models.Show:
+		var shows []models.Show
 		for rows.Next() {
 			var show models.Show
 			var genres, seasonsInfo []byte
@@ -426,9 +435,16 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 			}
 			unmarshalJSON(genres, &show.Genres)
 			unmarshalJSON(seasonsInfo, &show.SeasonsInfo)
-			*v = append(*v, show)
+			shows = append(shows, show)
 		}
+		// Sort shows by FirstAirDate in descending order
+		sort.SliceStable(shows, func(i, j int) bool {
+			return shows[i].FirstAirDate > shows[j].FirstAirDate
+		})
+		*v = shows
+
 	case *[]models.AnimeShow:
+		var animeShows []models.AnimeShow
 		for rows.Next() {
 			var animeShow models.AnimeShow
 			var genres []byte
@@ -446,9 +462,23 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 				return err
 			}
 			unmarshalJSON(genres, &animeShow.Genres)
-			*v = append(*v, animeShow)
+			animeShows = append(animeShows, animeShow)
 		}
+		// Sort anime shows by EndDate, placing those with no EndDate at the top
+		sort.SliceStable(animeShows, func(i, j int) bool {
+			// If EndDate is empty, place it at the top
+			if animeShows[i].Attributes.EndDate == "" {
+				return true
+			}
+			if animeShows[j].Attributes.EndDate == "" {
+				return false
+			}
+			return animeShows[i].Attributes.EndDate > animeShows[j].Attributes.EndDate
+		})
+		*v = animeShows
+
 	case *[]models.AnimeMovie:
+		var animeMovies []models.AnimeMovie
 		for rows.Next() {
 			var animeMovie models.AnimeMovie
 			var genres []byte
@@ -466,22 +496,40 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 				return err
 			}
 			unmarshalJSON(genres, &animeMovie.Genres)
-			*v = append(*v, animeMovie)
+			animeMovies = append(animeMovies, animeMovie)
 		}
+		// Sort anime movies by EndDate, placing those with no EndDate at the top
+		sort.SliceStable(animeMovies, func(i, j int) bool {
+			// If EndDate is empty, place it at the top
+			if animeMovies[i].Attributes.EndDate == "" {
+				return true
+			}
+			if animeMovies[j].Attributes.EndDate == "" {
+				return false
+			}
+			return animeMovies[i].Attributes.EndDate > animeMovies[j].Attributes.EndDate
+		})
+		*v = animeMovies
+
 	case *[]models.User:
+		var users []models.User
 		for rows.Next() {
 			var user models.User
 			err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Email, &user.Role, &user.Active, &user.Created, &user.Updated, &user.Avatar, pq.Array(&user.Favorites), pq.Array(&user.Friends), pq.Array(&user.Rooms), pq.Array(&user.Watched))
 			if err != nil {
 				return fmt.Errorf("error scanning row: %v", err)
 			}
-			*v = append(*v, user)
+			users = append(users, user)
 		}
+		*v = users
+
 	default:
 		return fmt.Errorf("unsupported result type")
 	}
+
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error iterating rows: %v", err)
 	}
+
 	return nil
 }

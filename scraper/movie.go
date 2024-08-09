@@ -78,7 +78,7 @@ func (ms *MovieScraper) Scrape() error {
 	ids = utils.RemoveDuplicateStrings(ids) // Remove duplicates
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 3) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
 
 	for _, id := range ids {
 		wg.Add(1)
@@ -214,7 +214,6 @@ func (ms *MovieScraper) FetchMovieIDsFromTMDB() ([]string, error) {
 	return ids, nil
 }
 
-
 // Scrape orchestrates the fetching of movie data from multiple sources.
 func (ms *MovieScraper) Scrape() error {
 	ids, err := ms.FetchMovieIDsFromTMDB()
@@ -223,7 +222,7 @@ func (ms *MovieScraper) Scrape() error {
 	}
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 20) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 40) // Limit the number of concurrent goroutines
 
 	for _, id := range ids {
 		wg.Add(1)

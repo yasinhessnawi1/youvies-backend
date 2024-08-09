@@ -13,8 +13,8 @@ import (
 func GetShows(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
-	if version == "tiny" {
-		collection = "tiny_show"
+	if version == "sorted" {
+		collection = "sorted_show"
 	}
 
 	// Read pagination parameters from URL query
@@ -63,8 +63,8 @@ func GetShowByID(c *gin.Context) {
 func GetShowsByGenre(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
-	if version == "tiny" {
-		collection = "tiny_show"
+	if version == "sorted" {
+		collection = "sorted_show"
 	}
 	genre := c.Param("genre")
 
@@ -97,8 +97,8 @@ func GetShowsByGenre(c *gin.Context) {
 func SearchShows(c *gin.Context) {
 	version := c.Query("type")
 	collection := "show"
-	if version == "tiny" {
-		collection = "tiny_show"
+	if version == "sorted" {
+		collection = "sorted_show"
 	}
 	title := c.Query("title")
 

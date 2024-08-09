@@ -13,8 +13,8 @@ import (
 func GetMovies(c *gin.Context) {
 	version := c.Query("type")
 	collection := "movie"
-	if version == "tiny" {
-		collection = "tiny_movie"
+	if version == "sorted" {
+		collection = "sorted_movies"
 	}
 
 	// Read pagination parameters from URL query
@@ -63,8 +63,8 @@ func GetMovieByID(c *gin.Context) {
 func GetMoviesByGenre(c *gin.Context) {
 	version := c.Query("type")
 	collection := "movie"
-	if version == "tiny" {
-		collection = "tiny_movie"
+	if version == "sorted" {
+		collection = "sorted_movies"
 	}
 	genre := c.Param("genre")
 
@@ -97,8 +97,8 @@ func GetMoviesByGenre(c *gin.Context) {
 func SearchMovies(c *gin.Context) {
 	version := c.Query("type")
 	collection := "movie"
-	if version == "tiny" {
-		collection = "tiny_movie"
+	if version == "sorted" {
+		collection = "sorted_movies"
 	}
 	title := c.Query("title")
 

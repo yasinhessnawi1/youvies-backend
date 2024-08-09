@@ -21,19 +21,33 @@ func NewAnimeMovieScraper() *AnimeMovieScraper {
 
 func (s *AnimeMovieScraper) Scrape(animeList []models.Anime) error {
 	for _, anime := range animeList {
-		if strings.Contains(anime.Attributes.Slug, "delete") {
-			continue
-		}
-
-		// Fetch the last updated timestamp from your database
-		existingAnime := models.AnimeMovie{}
-		if err := database.FindItem(anime.ID, "anime_movies", &existingAnime); err != nil {
-			log.Printf("Failed to fetch existing anime movie: %v", err)
+		if strings.Contains(anime.Attributes.Slug, "delete") || anime.Attributes.Subtype != "movie" {
 			continue
 		}
 		exists, err := database.IfItemExists(anime.ID, "anime_movies")
 		if err != nil {
 			log.Printf("Error checking if item exists: %v", err)
+			continue
+		}
+		if !exists {
+			// Fetch genres
+			genres, err := utils.FetchGenres(anime.Relationships.Genres.Links.Related)
+			if err != nil {
+				log.Printf("Failed to fetch genres for %s: %v", anime.Attributes.CanonicalTitle, err)
+				continue
+			}
+
+			animeDoc := s.createAnimeMovieDoc(anime, genres)
+
+			if err := database.InsertItem(animeDoc, "anime_movies"); err != nil {
+				log.Printf("Failed to save anime movie %s to database: %v", animeDoc.Title, err)
+			}
+			continue
+		}
+		// Fetch the last updated timestamp from your database
+		existingAnime := models.AnimeMovie{}
+		if err := database.FindItem(anime.ID, "anime_movies", &existingAnime); err != nil {
+			log.Printf("Failed to fetch existing anime movie: %v", err)
 			continue
 		}
 

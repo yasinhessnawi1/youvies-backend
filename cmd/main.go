@@ -56,6 +56,7 @@ func main() {
 		showScraper,
 		movieScraper,
 	})
+
 	// Run the bulk scraper every 24 hours
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
