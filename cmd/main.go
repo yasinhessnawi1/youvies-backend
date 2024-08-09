@@ -18,7 +18,6 @@ func main() {
 	if err != nil {
 		log.Printf("Error loading .env file: %v", err)
 	}
-
 	// Create a new Gin router
 	router := gin.Default()
 	router.Use(enableCors)
@@ -34,8 +33,6 @@ func main() {
 	if port == "" {
 		port = "5000"
 	}
-	log.Printf("Starting server on port %s", port)
-
 	go func() {
 		if err := router.Run(":" + port); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
@@ -91,12 +88,16 @@ func main() {
 	if err != nil {
 		log.Printf("Error fetching sorted anime: %v", err)
 	}
-	if err := animeShowScraper.Scrape(animeList); err != nil {
-		log.Printf("Error scraping anime shows: %v", err)
-	}
-	if err := animeMovieScraper.Scrape(animeList); err != nil {
-		log.Printf("Error scraping anime movies: %v", err)
-	}
+	go func() {
+		if err := animeShowScraper.Scrape(animeList); err != nil {
+			log.Printf("Error scraping anime shows: %v", err)
+		}
+	}()
+	go func() {
+		if err := animeMovieScraper.Scrape(animeList); err != nil {
+			log.Printf("Error scraping anime movies: %v", err)
+		}
+	}()
 
 	// Block forever to keep the program running
 	select {}
