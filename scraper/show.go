@@ -166,7 +166,7 @@ func (ss *ShowScraper) Scrape() error {
 	ids = utils.RemoveDuplicateStrings(ids) // Remove duplicates
 
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 1) // Limit the number of concurrent goroutines
+	semaphore := make(chan struct{}, 5) // Limit the number of concurrent goroutines
 
 	for _, id := range ids {
 		wg.Add(1)

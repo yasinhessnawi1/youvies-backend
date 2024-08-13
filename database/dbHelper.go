@@ -411,7 +411,7 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 		for rows.Next() {
 			var movie models.Movie
 			var genres []byte
-			err := rows.Scan(&movie.ID, &movie.OriginalLanguage, &movie.OriginalTitle, &movie.Overview, &movie.Popularity, &movie.PosterPath, &movie.ReleaseDate, &movie.Title, &movie.VoteAverage, &movie.VoteCount, &movie.BackdropPath, &genres, &movie.LastUpdated)
+			err := rows.Scan(&movie.ID, &movie.Overview, &movie.PosterPath, &movie.ReleaseDate, &movie.Title, &movie.VoteAverage, &movie.BackdropPath, &movie.Popularity, &genres)
 			if err != nil {
 				return fmt.Errorf("error scanning row: %v", err)
 			}
@@ -443,73 +443,31 @@ func scanRows(rows *sql.Rows, results interface{}) error {
 		})
 		*v = shows
 
-	case *[]models.AnimeShow:
-		var animeShows []models.AnimeShow
+	case *[]models.AnimeTiny:
+		var animeShows []models.AnimeTiny
 		for rows.Next() {
-			var animeShow models.AnimeShow
-			var genres []byte
-			var attributesID, relationshipsID int64
-			err := rows.Scan(&animeShow.ID, &animeShow.Title, &attributesID, &relationshipsID, &genres)
+			var animeShow models.AnimeTiny
+			var genres, posterPath, coverImage []byte
+			err := rows.Scan(&animeShow.ID, &animeShow.Title, &genres, &animeShow.AttributeID,
+				&animeShow.Slug, &animeShow.Synopsis,
+				&animeShow.Description,
+				&animeShow.CanonicalTitle,
+				&animeShow.AverageRating,
+				&animeShow.PopularityRank,
+				&animeShow.RatingRank,
+				&animeShow.SubType,
+				&animeShow.EpisodeCount,
+				&posterPath,
+				&coverImage)
 			if err != nil {
 				return fmt.Errorf("error scanning row: %v", err)
-			}
-			animeShow.Attributes, err = getAttributes(attributesID)
-			if err != nil {
-				return err
-			}
-			animeShow.Relationships, err = getRelationships(relationshipsID)
-			if err != nil {
-				return err
 			}
 			unmarshalJSON(genres, &animeShow.Genres)
+			unmarshalJSON(posterPath, &animeShow.PosterImage)
+			unmarshalJSON(coverImage, &animeShow.CoverImage)
 			animeShows = append(animeShows, animeShow)
 		}
-		// Sort anime shows by EndDate, placing those with no EndDate at the top
-		sort.SliceStable(animeShows, func(i, j int) bool {
-			// If EndDate is empty, place it at the top
-			if animeShows[i].Attributes.EndDate == "" {
-				return true
-			}
-			if animeShows[j].Attributes.EndDate == "" {
-				return false
-			}
-			return animeShows[i].Attributes.EndDate > animeShows[j].Attributes.EndDate
-		})
 		*v = animeShows
-
-	case *[]models.AnimeMovie:
-		var animeMovies []models.AnimeMovie
-		for rows.Next() {
-			var animeMovie models.AnimeMovie
-			var genres []byte
-			var attributesID, relationshipsID int64
-			err := rows.Scan(&animeMovie.ID, &animeMovie.Title, &attributesID, &relationshipsID, &genres)
-			if err != nil {
-				return fmt.Errorf("error scanning row: %v", err)
-			}
-			animeMovie.Attributes, err = getAttributes(attributesID)
-			if err != nil {
-				return err
-			}
-			animeMovie.Relationships, err = getRelationships(relationshipsID)
-			if err != nil {
-				return err
-			}
-			unmarshalJSON(genres, &animeMovie.Genres)
-			animeMovies = append(animeMovies, animeMovie)
-		}
-		// Sort anime movies by EndDate, placing those with no EndDate at the top
-		sort.SliceStable(animeMovies, func(i, j int) bool {
-			// If EndDate is empty, place it at the top
-			if animeMovies[i].Attributes.EndDate == "" {
-				return true
-			}
-			if animeMovies[j].Attributes.EndDate == "" {
-				return false
-			}
-			return animeMovies[i].Attributes.EndDate > animeMovies[j].Attributes.EndDate
-		})
-		*v = animeMovies
 
 	case *[]models.User:
 		var users []models.User

@@ -20,30 +20,30 @@ type AnimeShow struct {
 
 type Attributes struct {
 	ID             int64     `json:"id"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
+	CreatedAt      time.Time `json:"createdAt,omitempty"`
+	UpdatedAt      time.Time `json:"updatedAt,omitempty"`
 	Slug           string    `json:"slug"`
 	Synopsis       string    `json:"synopsis"`
 	Description    string    `json:"description"`
-	Titles         Titles    `json:"titles"`
+	Titles         Titles    `json:"titles,omitempty"`
 	CanonicalTitle string    `json:"canonicalTitle"`
 	AverageRating  string    `json:"averageRating"`
-	FavoritesCount int       `json:"favoritesCount"`
-	StartDate      string    `json:"startDate"`
-	EndDate        string    `json:"endDate"`
-	NextRelease    string    `json:"nextRelease"`
+	FavoritesCount int       `json:"favoritesCount,omitempty"`
+	StartDate      string    `json:"startDate,omitempty"`
+	EndDate        string    `json:"endDate,omitempty"`
+	NextRelease    string    `json:"nextRelease,omitempty"`
 	PopularityRank int       `json:"popularityRank"`
 	RatingRank     int       `json:"ratingRank"`
-	AgeRating      string    `json:"ageRating"`
-	AgeRatingGuide string    `json:"ageRatingGuide"`
+	AgeRating      string    `json:"ageRating,omitempty"`
+	AgeRatingGuide string    `json:"ageRatingGuide,omitempty"`
 	Subtype        string    `json:"subtype"`
-	Status         string    `json:"status"`
+	Status         string    `json:"status,omitempty"`
 	PosterImage    Image     `json:"posterImage"`
 	CoverImage     Image     `json:"coverImage"`
 	EpisodeCount   int       `json:"episodeCount"`
-	EpisodeLength  int       `json:"episodeLength"`
-	YoutubeVideoId string    `json:"youtubeVideoId"`
-	ShowType       string    `json:"showType"`
+	EpisodeLength  int       `json:"episodeLength,omitempty"`
+	YoutubeVideoId string    `json:"youtubeVideoId,omitempty"`
+	ShowType       string    `json:"showType,omitempty"`
 }
 
 type Titles struct {
@@ -127,14 +127,14 @@ type EpisodeAttributes struct {
 type Movie struct {
 	ID               string         `json:"id,omitempty"`
 	OriginalLanguage string         `json:"original_language,omitempty"`
-	OriginalTitle    string         `json:"original_title"`
+	OriginalTitle    string         `json:"original_title,omitempty"`
 	Overview         string         `json:"overview"`
 	Popularity       float64        `json:"popularity"`
 	PosterPath       string         `json:"poster_path"`
 	ReleaseDate      string         `json:"release_date"`
 	Title            string         `json:"title"`
 	VoteAverage      float64        `json:"vote_average"`
-	VoteCount        int            `json:"vote_count"`
+	VoteCount        int            `json:"vote_count,omitempty"`
 	BackdropPath     string         `json:"backdrop_path"`
 	Genres           []GenreMapping `json:"genres"`
 	LastUpdated      string         `json:"last_updated,omitempty"`
@@ -144,8 +144,8 @@ type Show struct {
 	ID               string         `json:"id,omitempty"`
 	Title            string         `json:"title"`
 	Overview         string         `json:"overview"`
-	PosterPath       string         `json:"image_url"`
-	FirstAirDate     string         `json:"first_air_date"`
+	PosterPath       string         `json:"poster_path"`
+	FirstAirDate     string         `json:"first_air_date,omitempty"`
 	Genres           []GenreMapping `json:"genres"`
 	VoteAverage      float64        `json:"vote_average"`
 	VoteCount        int            `json:"vote_count"`
@@ -198,4 +198,22 @@ type Episode struct {
 	Airdate        string    `json:"airdate"`
 	Length         int       `json:"length"`
 	Thumbnail      Image     `json:"thumbnail"` // JSON field
+}
+
+type AnimeTiny struct {
+	ID             string         `json:"id"`
+	Title          string         `json:"title"`
+	Genres         []GenreMapping `json:"genres"`
+	AttributeID    int64          `json:"attribute_id"`
+	Slug           string         `json:"slug"`
+	Synopsis       string         `json:"synopsis"`
+	Description    string         `json:"description"`
+	CanonicalTitle string         `json:"canonicalTitle"`
+	AverageRating  string         `json:"average_rating"`
+	PopularityRank int            `json:"popularity_rank"`
+	RatingRank     int            `json:"rating_rank"`
+	SubType        string         `json:"subtype"`
+	EpisodeCount   int            `json:"episode_count"`
+	PosterImage    Image          `json:"poster_image"`
+	CoverImage     Image          `json:"cover_image"`
 }

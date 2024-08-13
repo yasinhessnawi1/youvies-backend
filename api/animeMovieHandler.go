@@ -35,7 +35,7 @@ func GetAnimeMovies(c *gin.Context) {
 	skip := (page - 1) * pageSize
 
 	// Find with pagination
-	var animeMovies []models.AnimeMovie
+	var animeMovies []models.AnimeTiny
 	err = database.FindMany(collection, &animeMovies, pageSize, skip)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -49,7 +49,7 @@ func GetAnimeMovies(c *gin.Context) {
 func GetAnimeMovieByID(c *gin.Context) {
 	id := c.Param("id")
 
-	var animeMovie models.AnimeMovie
+	var animeMovie models.AnimeTiny
 	err := database.FindItem(id, "anime_movies", &animeMovie)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Anime movie not found"})
@@ -84,7 +84,7 @@ func GetAnimeMoviesByGenre(c *gin.Context) {
 	}
 
 	skip := (page - 1) * pageSize
-	var animeMovies []models.AnimeMovie
+	var animeMovies []models.AnimeTiny
 	err = database.FindByGenre(collection, genre, &animeMovies, pageSize, skip)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -102,7 +102,7 @@ func SearchAnimeMovies(c *gin.Context) {
 	}
 	title := c.Query("title")
 
-	var animeMovies []models.AnimeMovie
+	var animeMovies []models.AnimeTiny
 	err := database.SearchItems(collection, title, &animeMovies, 10, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

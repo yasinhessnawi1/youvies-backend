@@ -69,17 +69,41 @@ func (s *AnimeShowScraper) Scrape(animeList []models.Anime) error {
 						log.Printf("Failed to insert episode %d for anime show %s: %v", episode.Number, animeDoc.Title, err)
 					}
 				}
-				return
-			}
-			existingAnime := models.AnimeShow{}
-			if err := database.FindItem(anime.ID, "anime_shows", &existingAnime); err != nil {
-				log.Printf("Failed to fetch existing anime show: %v", err)
-				return
-			}
 
-			// Compare the updated_at timestamp
-			if anime.Attributes.UpdatedAt.After(existingAnime.Attributes.UpdatedAt) || !exists {
-				// Fetch episodes
+				existingAnime := models.AnimeShow{}
+				if err := database.FindItem(anime.ID, "anime_shows", &existingAnime); err != nil {
+					log.Printf("Failed to fetch existing anime show: %v", err)
+					return
+				}
+
+				// Compare the updated_at timestamp
+				if anime.Attributes.UpdatedAt.After(existingAnime.Attributes.UpdatedAt) || !exists {
+					// Fetch episodes
+					episodes, err := utils.FetchAllEpisodes(anime.ID)
+					if err != nil {
+						log.Printf("Failed to fetch episodes for anime %s: %v", anime.Attributes.CanonicalTitle, err)
+						return
+					}
+					if len(episodes) > anime.Attributes.EpisodeCount {
+						anime.Attributes.EpisodeCount = len(episodes)
+					}
+
+					genres, err := utils.FetchGenres(anime.Relationships.Genres.Links.Related)
+					if err != nil {
+						log.Printf("Failed to fetch genres for %s: %v", anime.Attributes.CanonicalTitle, err)
+						return
+					}
+
+					animeDoc := s.createAnimeShowDoc(anime, genres)
+					if existingAnime.ID != "" {
+						// Update the existing item
+						if err := database.EditItem(animeDoc, "anime_shows"); err != nil {
+							log.Printf("Failed to update anime show %s in database: %v", animeDoc.Title, err)
+						}
+					}
+				}
+			} else {
+				// Insert the new item
 				episodes, err := utils.FetchAllEpisodes(anime.ID)
 				if err != nil {
 					log.Printf("Failed to fetch episodes for anime %s: %v", anime.Attributes.CanonicalTitle, err)
@@ -96,18 +120,19 @@ func (s *AnimeShowScraper) Scrape(animeList []models.Anime) error {
 				}
 
 				animeDoc := s.createAnimeShowDoc(anime, genres)
-				if existingAnime.ID != "" {
-					// Update the existing item
-					if err := database.EditItem(animeDoc, "anime_shows"); err != nil {
-						log.Printf("Failed to update anime show %s in database: %v", animeDoc.Title, err)
-					}
-				} else {
-					// Insert the new item
-					if err := database.InsertItem(animeDoc, "anime_shows"); err != nil {
-						log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
+
+				if err := database.InsertItem(animeDoc, "anime_shows"); err != nil {
+					log.Printf("Failed to save anime show %s to database: %v", animeDoc.Title, err)
+					return
+				}
+
+				for _, episode := range episodes {
+					if _, err := database.InsertEpisode(episode); err != nil {
+						log.Printf("Failed to insert episode %d for anime show %s: %v", episode.Number, animeDoc.Title, err)
 					}
 				}
 			}
+
 		}(anime)
 	}
 

@@ -35,7 +35,7 @@ func GetAnimeShows(c *gin.Context) {
 	skip := (page - 1) * pageSize
 
 	// Find with pagination
-	var animeShows []models.AnimeShow
+	var animeShows []models.AnimeTiny
 	err = database.FindMany(collection, &animeShows, pageSize, skip)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -84,7 +84,7 @@ func GetAnimeShowsByGenre(c *gin.Context) {
 	}
 
 	skip := (page - 1) * pageSize
-	var animeShows []models.AnimeShow
+	var animeShows []models.AnimeTiny
 	err = database.FindByGenre(collection, genre, &animeShows, pageSize, skip)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -102,7 +102,7 @@ func SearchAnimeShows(c *gin.Context) {
 	}
 	title := c.Query("title")
 
-	var animeShows []models.AnimeShow
+	var animeShows []models.AnimeTiny
 	err := database.SearchItems(collection, title, &animeShows, 10, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
