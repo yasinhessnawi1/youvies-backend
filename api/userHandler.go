@@ -101,19 +101,8 @@ func EditUser(c *gin.Context) {
 	}
 
 	userUpdate.Updated = time.Now()
-	if userUpdate.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userUpdate.Password), bcrypt.DefaultCost)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
-			return
-		}
-		userUpdate.Password = string(hashedPassword)
-	}
-
-	update := map[string]interface{}{"$set": userUpdate}
-
-	if err := database.EditItem(update, "users"); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
+	if err := database.EditItem(&userUpdate, "users"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user " + err.Error()})
 		return
 	}
 
