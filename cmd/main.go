@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"youvies-backend/api"
+	"youvies-backend/database"
 )
 
 func main() {
@@ -29,6 +30,7 @@ func main() {
 	if port == "" {
 		port = "5000"
 	}
+	database.ConnectDB()
 	go func() {
 		if err := router.Run(":" + port); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
@@ -38,7 +40,7 @@ func main() {
 		tmdb := os.Getenv("TMDB_KEY")
 
 		// Connect to the database
-		database.ConnectDB()
+
 		movieScraper := scraper.NewMovieScraper(tmdb)
 		showScraper := scraper.NewShowScraper(tmdb)
 		//animeShowScraper := scraper.NewAnimeShowScraper()

@@ -229,6 +229,8 @@ func EditItem(update interface{}, tableName string) error {
 			username=$1, password=$2, email=$3, role=$4, active=$5, created=$6, updated=$7, avatar=$8, favorites=$9, friends=$10, rooms=$11, watched=$12 
 			WHERE id=$13`, tableName)
 		args = append(args, v.Username, v.Password, v.Email, v.Role, v.Active, v.Created, v.Updated, v.Avatar, pq.Array(v.Favorites), pq.Array(v.Friends), pq.Array(v.Rooms), pq.Array(v.Watched), v.ID)
+		user, _ := getUser(v.Username)
+		log.Println(user)
 	default:
 		return fmt.Errorf("unsupported item type")
 	}
