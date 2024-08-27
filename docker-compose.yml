@@ -10,9 +10,6 @@ services:
       - "127.0.0.1:5000:5000"
     environment:
       - PORT=${PORT}
-      - OMDB_KEY=${OMDB_KEY}
-      - TMDB_KEY=${TMDB_KEY}
-      - TVDB_KEY=${TVDB_KEY}
       - POSTGRES_URI=${POSTGRES_URI}
       - CRON_TIME=${CRON_TIME}
       - TEMP_DIR=${TEMP_DIR}

@@ -11,7 +11,6 @@ WORKDIR /go/src/youvies-backend
 COPY go.mod go.sum /go/src/youvies-backend/
 # Download all the dependencies specified in go.mod and go.sum.
 RUN go mod download
-RUN go get github.com/anacrolix/torrent
 
 # Copy the rest of the application code to the container.
 COPY api/ /go/src/youvies-backend/api
@@ -19,7 +18,6 @@ COPY database/ /go/src/youvies-backend/database
 COPY models/ /go/src/youvies-backend/models
 COPY cmd/ /go/src/youvies-backend/cmd
 COPY utils/ /go/src/youvies-backend/utils
-COPY scraper/ /go/src/youvies-backend/scraper
 COPY .env /go/src/youvies-backend/
 # Compile the application to an executable named 'dashboard'.
 # Specify the directory of the main package if it's not in the root directory.
