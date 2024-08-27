@@ -21,7 +21,6 @@ func main() {
 	router.HandleMethodNotAllowed = true
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(gin.ErrorLoggerT(gin.ErrorTypeAny))
 	router.Use(logClientIP)
 	// Register routes
 	api.RegisterRoutes(router)
