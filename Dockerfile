@@ -32,8 +32,6 @@ FROM alpine:latest
 COPY --from=builder /go/src/youvies-backend/youvies-backend .
 COPY --from=builder /go/src/youvies-backend/.env .
 COPY --from=builder /go/src/youvies-backend/utils/ ./utils
-# Inform Docker that the container listens on port 5000 at runtime.
-EXPOSE 5000
 
 # Define a health check for the application.
 # This will help Docker know how to test that the application is working.
