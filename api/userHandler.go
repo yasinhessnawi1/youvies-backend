@@ -92,7 +92,13 @@ func LoginUser(c *gin.Context) {
 
 // EditUser handles updating user details.
 func EditUser(c *gin.Context) {
-	//userID := c.GetString("user")
+	var user models.User
+	userID := c.GetHeader("user")
+	err := database.FindItem(userID, "users", &user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
 
 	var userUpdate models.User
 	if err := c.BindJSON(&userUpdate); err != nil {
@@ -100,7 +106,6 @@ func EditUser(c *gin.Context) {
 		return
 	}
 
-	userUpdate.Updated = time.Now()
 	if err := database.EditItem(&userUpdate, "users"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user " + err.Error()})
 		return
