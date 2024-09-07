@@ -6,22 +6,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"youvies-backend/api"
 	"youvies-backend/database"
 )
 
 func main() {
+	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
 		log.Printf("Error loading .env file: %v", err)
 	}
+
 	// Create a new Gin router
 	router := gin.Default()
-	router.Use(enableCors)
+
+	// Middleware
+	router.Use(corsMiddleware()) // Use custom CORS middleware
 	router.HandleMethodNotAllowed = true
 	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
-	router.Use(logClientIP)
+
 	// Register routes
 	api.RegisterRoutes(router)
 
@@ -30,43 +34,45 @@ func main() {
 	if port == "" {
 		port = "5000"
 	}
+
 	database.ConnectDB()
+
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
-func enableCors(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+// CORS middleware to restrict allowed origins
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		allowedOrigins := []string{
+			"https://<your-github-username>.github.io", // Replace with your GitHub Pages URL
+			"http://localhost:3000",
+			"https://localhost:3000", // In the case of HTTPS locally
+		}
 
-	if c.Request.Method == "OPTIONS" {
-		c.AbortWithStatus(http.StatusOK)
-		return
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" && isValidOrigin(origin, allowedOrigins) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		}
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+
+		c.Next()
 	}
-
-	c.Next()
 }
 
-// getClientIP tries to get the client's real IP address
-func getClientIP(c *gin.Context) string {
-	// First try to get the IP from X-Real-IP header (used by some proxies)
-	ip := c.GetHeader("X-Real-IP")
-	if ip == "" {
-		// Next try to get the IP from X-Forwarded-For header (used by load balancers)
-		ip = c.GetHeader("X-Forwarded-For")
+// Helper function to check if the origin is valid
+func isValidOrigin(origin string, allowedOrigins []string) bool {
+	for _, allowedOrigin := range allowedOrigins {
+		if strings.EqualFold(origin, allowedOrigin) {
+			return true
+		}
 	}
-	if ip == "" {
-		// Fall back to using the direct remote address
-		ip = c.ClientIP()
-	}
-	return ip
-}
-
-// Middleware to log the client's IP address
-func logClientIP(c *gin.Context) {
-	ip := getClientIP(c)
-	log.Printf("Client IP: %s", ip)
-	c.Next() // continue to the next handler
+	return false
 }

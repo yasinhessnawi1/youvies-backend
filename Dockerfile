@@ -1,42 +1,44 @@
+# Build Stage
 FROM golang:1.22 as builder
 
-# Label the stage and the maintainer of the Dockerfile.
+# Label the stage and the maintainer of the Dockerfile
 LABEL maintainer="yasinmh@stud.ntnu.no"
 LABEL stage=builder
 
-# Set the working directory inside the container where all commands will be run.
+# Set the working directory
 WORKDIR /go/src/youvies-backend
 
-# Copy the go module files first to leverage Docker cache to save re-downloading the same dependencies.
-COPY go.mod go.sum /go/src/youvies-backend/
-# Download all the dependencies specified in go.mod and go.sum.
+# Copy go.mod and go.sum for dependency management
+COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
 
-# Copy the rest of the application code to the container.
-COPY api/ /go/src/youvies-backend/api
-COPY database/ /go/src/youvies-backend/database
-COPY models/ /go/src/youvies-backend/models
-COPY cmd/ /go/src/youvies-backend/cmd
-COPY utils/ /go/src/youvies-backend/utils
-COPY .env /go/src/youvies-backend/
-# Compile the application to an executable named 'dashboard'.
-# Specify the directory of the main package if it's not in the root directory.
-# CGO_ENABLED=0 is required for building a statically linked binary.
-# GOOS=linux specifies that the binary is for Linux OS.
+# Copy the rest of the application code
+COPY . .
+
+# Compile the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o youvies-backend ./cmd
 
-# Start a new stage from scratch to keep the final image clean and small.
+# Production Stage
 FROM alpine:latest
 
-# Copy only the built executable from the builder stage into this lightweight image.
+# Install dependencies required for running the application and health checks
+RUN apk --no-cache add ca-certificates curl
+
+# Set the working directory inside the production image
+WORKDIR /app
+
+# Copy the executable and .env file from the builder stage
 COPY --from=builder /go/src/youvies-backend/youvies-backend .
 COPY --from=builder /go/src/youvies-backend/.env .
-COPY --from=builder /go/src/youvies-backend/utils/ ./utils
 
-# Define a health check for the application.
-# This will help Docker know how to test that the application is working.
+# Expose the application port
+EXPOSE 5000
+
+# Health check configuration
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD [ "curl", "-f", "http://localhost:5000/health" ]
+  CMD curl -f http://localhost:5000/health || exit 1
 
-# Set the container's default executable which is the application binary.
+# Define the default command to run the application
 ENTRYPOINT ["./youvies-backend"]

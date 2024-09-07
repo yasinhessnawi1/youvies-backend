@@ -133,7 +133,9 @@ func FindItem(id string, tableName string, result interface{}) error {
 }
 
 func FindUser(itemName, tableName string) (string, error) {
-	query := fmt.Sprintf("SELECT id FROM %s WHERE username = $1", tableName)
+	// Prepare SQL query to check both username and email
+	query := fmt.Sprintf("SELECT id FROM %s WHERE username = $1 OR email = $1", tableName)
+
 	var id string
 	err := DB.QueryRow(query, itemName).Scan(&id)
 	if err != nil {
