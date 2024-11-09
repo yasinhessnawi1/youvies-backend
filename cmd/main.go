@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 	"time"
+	"youvies-backend/api"
 
 	"github.com/gin-contrib/secure" // Security headers middleware
 	"golang.org/x/time/rate"        // Rate limiting package
-	"youvies-backend/api"
 	"youvies-backend/database"
 )
 
@@ -28,6 +28,7 @@ func main() {
 
 	// Create a new Gin router
 	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 
 	// Middleware
 	router.Use(corsMiddleware())            // Custom CORS middleware
@@ -60,6 +61,8 @@ func corsMiddleware() gin.HandlerFunc {
 			"http://localhost:3000",
 			"https://localhost:3000", // In the case of HTTPS locally
 			"https://youvies.online/",
+			"https://youvies.online",
+			"https://youvies.online/login",
 		}
 
 		origin := c.Request.Header.Get("Origin")
@@ -67,6 +70,7 @@ func corsMiddleware() gin.HandlerFunc {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true") // Allow credentials
 		}
 
 		if c.Request.Method == "OPTIONS" {
