@@ -63,6 +63,7 @@ func corsMiddleware() gin.HandlerFunc {
 			"https://youvies.online/",
 			"https://youvies.online",
 			"https://youvies.online/login",
+			"http://localhost:5173/",
 		}
 
 		origin := c.Request.Header.Get("Origin")
